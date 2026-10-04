@@ -1,5 +1,3 @@
-# Технологии параллельного программирования
+# 2026/2027 Технологии параллельного программирования (очная)
 
-Parallel Programming Technologies
-
-[PPT-2026 — описание курса и материалы](COURSE.md).
+## Parallel Programming Technologies

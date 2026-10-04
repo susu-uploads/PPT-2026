@@ -26,20 +26,20 @@ origin: "https://edu.susu.ru/mod/assign/view.php?id=8720542"
 -->
 
 Изучите приведенную ниже простейшую программу для GPU.
-Изучите спецификатор __global__ , и конструкцию запуска ядра <<<...>>> .
+Изучите спецификатор \_\_global\_\_ , и конструкцию запуска ядра \<\<\<...\>\>\> .
 Не забудьте, что расширение файла должно быть .cu .
 
-#include <stdio.h>
+#include \<stdio.h\>
 
-__global__ void HelloKernel()
+\_\_global\_\_ void HelloKernel()
 {
-printf("Hello world!");
+   printf("Hello world!");
 }
 
 int main()
 {
-HelloKernel<<<1, 1>>>();
-return 0;
+   HelloKernel\<\<\<1, 1\>\>\>();
+   return 0;
 }
 
 Соберите и запустите программу:

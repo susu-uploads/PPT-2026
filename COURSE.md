@@ -1,5 +1,5 @@
 ---
-ru: "Технологии параллельного программирования"
+ru: "2026/2027 Технологии параллельного программирования (очная)"
 en: "Parallel Programming Technologies"
 code: "PPT-2026"
 origin: "https://edu.susu.ru/course/view.php?id=216959"
@@ -23,56 +23,122 @@ origin: "https://edu.susu.ru/course/view.php?id=216959"
 Если источник недоступен, сохраните существующую выгрузку и сообщите об ограничении; не придумывайте недостающие сведения.
 -->
 
-# Технологии параллельного программирования
+# 2026/2027 Технологии параллельного программирования (очная)
 
-- **Учебный год:** 2026/2027, очная форма.
+## Информация о курсе
 
-## Преподаватели
+Ведущий преподаватель:  Маковецкая Татьяна Юрьевна, к.ф.-м.н., доцент кафедры СП, [tatyana.makovetskaya@susu.ru](mailto:tatyana.makovetskaya@susu.ru)
 
-Татьяна Юрьевна Маковецкая — ведущий преподаватель, доцент кафедры системного программирования, к.ф.-м.н.
+Структура курса и оценивание:
 
-## Формат оценки
+∙ 16 ч. лекций
 
-Экзамен. Текущая аттестация: лабораторные работы — 45 баллов, итоговая задача — 15 баллов, тесты по теории — 40 баллов; экзаменационный тест — 40 баллов.
+∙ 32 ч. практик
 
-## Темы
+∙ экзамен
 
-1. Архитектура параллельных систем
-2. Модели параллельного программирования
-3. OpenMP
-4. MPI
-5. Гибридное программирование
-6. Графические ускорители
-7. OpenACC
-8. Параллельные алгоритмы
+Финальная оценка за дисциплину формируется из:
 
+1\) баллов текущей аттестации
 
-## Материалы репозитория
+\- Выполнения лабораторных работ: 45 баллов
 
-- [ПП 1.ppt](lecture/lecture-1-parallel-programming/%D0%9F%D0%9F%201.ppt)
-- [ПП 2.ppt](lecture/lecture-2-parallel-programming/%D0%9F%D0%9F%202.ppt)
-- [ПП 3.ppt](lecture/lecture-3-parallel-programming/%D0%9F%D0%9F%203.ppt), [ОПП 3 (1) (3).pptx](lecture/lecture-3-parallel-programming/%D0%9E%D0%9F%D0%9F%203%20%281%29%20%283%29.pptx)
-- [ПП 4.ppt](lecture/lecture-4-parallel-programming/%D0%9F%D0%9F%204.ppt)
-- [OpenMP.ppt](lecture/lecture-5-openmp/OpenMP.ppt)
-- [ПП 6.ppt](lecture/lecture-6-parallel-programming/%D0%9F%D0%9F%206.ppt)
-- [ПП 7.ppt](lecture/lecture-7-parallel-programming/%D0%9F%D0%9F%207.ppt)
-- [ПП 8.ppt](lecture/lecture-8-parallel-programming/%D0%9F%D0%9F%208.ppt)
-- [ПП 9.ppt](lecture/lecture-9-parallel-programming/%D0%9F%D0%9F%209.ppt)
-- [ПП 10.ppt](lecture/lecture-10-parallel-programming/%D0%9F%D0%9F%2010.ppt)
-- [Гибридное программирование.ppt](lecture/lecture-11-hybrid-programming/%D0%93%D0%B8%D0%B1%D1%80%D0%B8%D0%B4%D0%BD%D0%BE%D0%B5%20%D0%BF%D1%80%D0%BE%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D0%B8%D1%80%D0%BE%D0%B2%D0%B0%D0%BD%D0%B8%D0%B5.ppt)
-- [OpenACC.pdf](lecture/lecture-12-openacc/OpenACC.pdf)
-- [lecture.pdf](lecture/lecture-13-lecture-materials/lecture.pdf)
-- [Лабораторные работы.pdf](lecture/lecture-14-laboratory-work/%D0%9B%D0%B0%D0%B1%D0%BE%D1%80%D0%B0%D1%82%D0%BE%D1%80%D0%BD%D1%8B%D0%B5%20%D1%80%D0%B0%D0%B1%D0%BE%D1%82%D1%8B.pdf)
-- [Пример.docx](lecture/lecture-15-example/%D0%9F%D1%80%D0%B8%D0%BC%D0%B5%D1%80.docx), [run-task.sh](lecture/lecture-15-example/run-task.sh)
-- [Практика 1 - Итоговая задача](practice/practice-1-final-problem/TASK.md)
-- [Практика 2 - Задание №1](practice/practice-2-assignment-1/TASK.md)
-- [Практика 3 - Задание №2](practice/practice-3-assignment-2/TASK.md)
-- [Практика 4 - Задание №3](practice/practice-4-assignment-3/TASK.md)
-- [Практика 5 - Задание №4](practice/practice-5-assignment-4/TASK.md)
-- [Практика 6 - Задание №5](practice/practice-6-assignment-5/TASK.md)
-- [Практика 7 - Задание №6](practice/practice-7-assignment-6/TASK.md)
-- [Практика 8 - Задание №7](practice/practice-8-assignment-7/TASK.md)
-- [Практика 9 - Задание №8](practice/practice-9-assignment-8/TASK.md)
-- [Практика 10 - Задание №9](practice/practice-10-assignment-9/TASK.md)
-- [Практика 11 - Задание №10](practice/practice-11-assignment-10/TASK.md)
-- [Практика 12 - Задание №11](practice/practice-12-assignment-11/TASK.md)
+\- Итоговая задача: 15 баллов
+
+\- Прохождения тестов по теории: 40 баллов (по 20 за тест)
+
+2\) баллов промежуточной аттестации
+
+\- Экзаменационный тест: 40 баллов
+
+Консультации по дисциплине проводятся по вторникам в 13:10 в 477а/3.
+
+- [Объявления](https://edu.susu.ru/mod/forum/view.php?id=8720515)
+
+- [Тест](https://edu.susu.ru/mod/quiz/view.php?id=8720516)
+
+- [Занятия в ДОТ](https://edu.susu.ru/mod/bigbluebuttonbn/view.php?id=8720517)
+
+- [Итоговая задача](https://edu.susu.ru/mod/assign/view.php?id=8720519)
+
+- [Экзаменационный тест](https://edu.susu.ru/mod/quiz/view.php?id=8720520)
+
+- [Посещаемость](https://edu.susu.ru/mod/attendance/view.php?id=8720521)
+
+## Topic 1
+
+- [Понятие параллельной вычислительной системы](https://edu.susu.ru/mod/resource/view.php?id=8720522)
+
+- [Архитектура параллельных вычислительных систем](https://edu.susu.ru/mod/resource/view.php?id=8720523)
+
+- [Оценка производительности многопроцессорных вычислительных систем](https://edu.susu.ru/mod/resource/view.php?id=8720524)
+
+- [Модели параллельного программирования](https://edu.susu.ru/mod/resource/view.php?id=8720525)
+
+- Тест №1
+
+## Topic 2
+
+- [Технологии параллельного программирования](https://edu.susu.ru/mod/resource/view.php?id=8720527)
+
+- [Методические указания](https://edu.susu.ru/mod/resource/view.php?id=8720528)
+
+- [Параллельное программирование в стандарте OpenMP](https://edu.susu.ru/mod/resource/view.php?id=8720529)
+
+- [Задание №1](https://edu.susu.ru/mod/assign/view.php?id=8720530)
+
+- [Задание №2](https://edu.susu.ru/mod/assign/view.php?id=8720531)
+
+- [Задание №3](https://edu.susu.ru/mod/assign/view.php?id=8720532)
+
+- [Параллельное программирование в стандарте MPI](https://edu.susu.ru/mod/resource/view.php?id=8720533)
+
+- [Задание №4](https://edu.susu.ru/mod/assign/view.php?id=8720534)
+
+- [Задание №5](https://edu.susu.ru/mod/assign/view.php?id=8720535)
+
+- [Задание №6](https://edu.susu.ru/mod/assign/view.php?id=8720536)
+
+- [Гибридное программирование](https://edu.susu.ru/mod/resource/view.php?id=8720537)
+
+- [Задание №7](https://edu.susu.ru/mod/assign/view.php?id=8720538)
+
+## Topic 3
+
+- [Программирование графических ускорителей](https://edu.susu.ru/mod/resource/view.php?id=8720539)
+
+- [Пример запуска cuda](https://edu.susu.ru/mod/resource/view.php?id=8720540)
+
+- [Пример запуска от Р. Алькапова](https://edu.susu.ru/mod/resource/view.php?id=8720541)
+
+- [Задание №8](https://edu.susu.ru/mod/assign/view.php?id=8720542)
+
+- [Задание №9](https://edu.susu.ru/mod/assign/view.php?id=8720543)
+
+- [Задание №10](https://edu.susu.ru/mod/assign/view.php?id=8720544)
+
+- [Стандарт OpenAcc](https://edu.susu.ru/mod/resource/view.php?id=8720545)
+
+- [Задание №11*](https://edu.susu.ru/mod/assign/view.php?id=8720546)
+
+- [Тест №2](https://edu.susu.ru/mod/quiz/view.php?id=8720547)
+
+## Тема 4
+
+- [Граф алгоритма и параллельные вычисления. Внутренний параллелизм программ](https://edu.susu.ru/mod/resource/view.php?id=8720548)
+
+- [Проектирование параллельных алгоритмов](https://edu.susu.ru/mod/resource/view.php?id=8720549)
+
+- [Оценка эффективности параллельных алгоритмов](https://edu.susu.ru/mod/resource/view.php?id=8720550)
+
+## Тема 5
+
+- [Распределенная разделяемая память](https://edu.susu.ru/mod/resource/view.php?id=8720551)
+
+## Литература
+
+1. Воеводин, В. В. Параллельные вычисления Учеб. пособие для вузов по направлению 510200 "Прикладная математика и информатика" В. В. Воеводин, Вл. В. Воеводин. \- СПб.: БХВ-Петербург, 2004\. \- 599 с.
+2. Эндрюс, Г. Р. Основы многопоточного, параллельного и распределенного программирования Г. Р. Эндрюс; Пер. с англ. А. С. Подосельник и др. \- М. и др.: Вильямс, 2003\. \- 505 с.
+3. Антонов, А. С. Технологии параллельного программирования MPI и OpenMP \[Текст\] учеб. пособие для вузов по направлениям ВПО 010400 "Прикладная математика и информатика" и 010300 "Фундамент. информатика и информационные технологии" А. С. Антонов ; Моск. гос. ун-т им. М. В. Ломоносова. \- М.: Издательство Московского университета, 2012\. \- 339 с.
+4. Инструменты параллельного программирования в системах с общей памятью \[Текст\] учебник для вузов по направлению ВПО 010400 "Приклад. и информатика" и 010300 "Фундамент. информатика и информ. технологии" К. В. Корняков и др.; Нижегородский гос. ун-т им. Н. И. Лобачевского ; под ред. В. П. Гергеля ; Суперкомпьютерный консорциум ун-тов России. \- 2-е изд., испр. и доп. \- Москва: Издательство Московского университета, 2010\. \- 262 с.
+5. Линев, А. В. Технологии параллельного программирования для процессоров новых архитектур \[Текст\] учебник для вузов по направлениям ВПО 010400 "Прикладная математика и информатика" и 010300 "Фундаментальная информатика и информационные технологии" А. В. Линев, Д. К. Боголепов, С. И. Бастраков ; под ред. В. П. Гергеля ; Нижегород. гос. ун-т им. Н. И. Лобачевского ; Суперкомпьютерный консорциум ун-тов России. \- Москва: Издательство Московского университетата, 2010\. \- 148 с.
