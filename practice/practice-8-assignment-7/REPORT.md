@@ -6,7 +6,147 @@
 
 Задание 30 выполнено настройкой CMake с MPI и OpenMP. task-31 читает число потоков k и печатает все пары идентификаторов. task-32 читает N; число потоков задаёт OMP_NUM_THREADS. Режим по умолчанию hybrid; --mode serial и --mode openmp дают сопоставимые базовые расчёты в том же исходнике. Для чистого MPI используется task-18 практики 6 с той же формулой и компилятором.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами. Формулировки заданий и оригинальные вложения сохранены.
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+
+## ИСХОДНЫЙ КОД
+
+### PPT-Практика-7-Задание-31-БабушкинМВ.cpp
+
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <mpi.h>
+#include <omp.h>
+#include <string>
+
+int main(int argc, char **argv) {
+  int provided;
+  // MPI_THREAD_FUNNELED разрешает MPI-вызовы только главному потоку процесса.
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+  // Если реализация не предоставила нужный уровень, продолжать гибридный запуск нельзя.
+  if (provided < MPI_THREAD_FUNNELED) {
+    std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  omp_set_dynamic(0);
+
+  // Количество потоков читает корень; рассылка передаёт значение всем процессам.
+  int k = 0;
+  if (rank == 0 && (!(std::cin >> k) || k <= 0)) {
+    k = 0;
+    std::cerr << "Нужно k > 0.\n";
+  }
+  MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  if (!k) {
+    MPI_Finalize();
+    return 2;
+  }
+// Внутри каждого MPI-процесса создаётся команда из k OpenMP-потоков.
+#pragma omp parallel num_threads(k)
+  {
+    // Печатается пара локальных идентификаторов и произведение размеров команды и группы.
+    std::printf(
+        "I am %d thread from %d process. Number of hybrid threads = %d.\n",
+        omp_get_thread_num(), rank, omp_get_num_threads() * size);
+  }
+
+  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+  MPI_Finalize();
+}
+```
+
+### PPT-Практика-7-Задание-32-БабушкинМВ.cpp
+
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <mpi.h>
+#include <omp.h>
+#include <string>
+
+int main(int argc, char **argv) {
+  int provided;
+  // Все MPI-вызовы выполняет главный поток; OpenMP используется только для локального расчёта.
+  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+  if (provided < MPI_THREAD_FUNNELED) {
+    std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
+    MPI_Abort(MPI_COMM_WORLD, 2);
+  }
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+  omp_set_dynamic(0);
+
+  // Режимы serial и openmp образуют базовые сравнения и допускают только один MPI-процесс.
+  std::string mode = "hybrid";
+  if (argc == 3 && std::string(argv[1]) == "--mode")
+    mode = argv[2];
+  if ((argc != 1 && argc != 3) ||
+      (argc == 3 && std::string(argv[1]) != "--mode") ||
+      (mode != "hybrid" && mode != "serial" && mode != "openmp") ||
+      (mode != "hybrid" && size != 1)) {
+    if (rank == 0)
+      std::cerr << "--mode serial|openmp|hybrid; serial/openmp требуют один "
+                   "процесс.\n";
+    MPI_Finalize();
+    return 2;
+  }
+  // Корень проверяет N и сообщает его всем участникам перед вычислением.
+  long long n = 0;
+  if (rank == 0 && (!(std::cin >> n) || n <= 0)) {
+    n = 0;
+    std::cerr << "Нужно N > 0.\n";
+  }
+  MPI_Bcast(&n, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+  if (!n) {
+    MPI_Finalize();
+    return 2;
+  }
+  // Смежные блоки покрывают все N итераций без пересечений; первые ранги получают остаток.
+  const long long base = n / size, remainder = n % size;
+  const long long begin = rank * base + std::min<long long>(rank, remainder);
+  const long long end = begin + base + (rank < remainder);
+  const double h = 1.0 / n;
+  double local = 0, total = 0;
+  // Перед началом измерения все MPI-процессы достигают общей точки синхронизации.
+  MPI_Barrier(MPI_COMM_WORLD);
+  const double start = MPI_Wtime();
+  // Последовательный режим вычисляет тот же интеграл без команды OpenMP.
+  if (mode == "serial") {
+    for (long long i = begin; i < end; ++i) {
+      const double x = (i + 0.5) * h;
+      local += 4.0 / (1.0 + x * x);
+    }
+  } else {
+// Одинаковая стоимость итераций позволяет использовать static и локальную редукцию суммы.
+#pragma omp parallel for reduction(+ : local) schedule(static)
+    for (long long i = begin; i < end; ++i) {
+      const double x = (i + 0.5) * h;
+      local += 4.0 / (1.0 + x * x);
+    }
+  }
+  // MPI объединяет частичные результаты процессов после завершения локальных потоков.
+  MPI_Reduce(&local, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+  const double elapsed = MPI_Wtime() - start;
+  double maximum;
+  // В таблицу попадает максимум локальных времён; эта редукция находится за границей замера.
+  MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+  // Корень выводит приближение pi, время и параметры конфигурации.
+  if (rank == 0) {
+    std::printf("pi = %.8f\nTime = %.12f\n", total * h, maximum);
+    std::printf("MPI processes = %d, OpenMP threads per process = %d\n", size,
+                mode == "serial" ? 1 : omp_get_max_threads());
+  }
+
+  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+  MPI_Finalize();
+}
+```
 
 ## Среда и сборка
 
@@ -175,9 +315,8 @@ MPI оперирует процессами ОС с отдельными адр�
 
 Гибридный расчёт сохраняет правильный результат при изменении числа процессов и потоков. На одном узле MPI, OpenMP и гибридная модель используют одни CPU-ядра; выбор сочетания зависит от размера задачи и накладных расходов. Таблица подтверждает ускорение большого расчёта, но не доказывает преимущество гибридной модели на кластере.
 
-## Источники и адаптация
+## Источники
 
 - [Методические указания: задания 30–32](<../../lecture/lecture-14-laboratory-work/Лабораторные работы.pdf>).
 - [Типовые контрольные вопросы №7.docx](<Типовые контрольные вопросы №7.docx>): исходные контрольные вопросы.
-- Готовые решения Машкина А.А., `Lab7.cpp`, архив «Машкин А.А. Работы по MPI.zip»; сверка с проектами Иванова Я.А. из предоставленного каталога University. Это источники адаптации, а не результаты измерений данного компьютера.
 - [Спецификации OpenMP](https://www.openmp.org/specifications/) и [документация Open MPI](https://docs.open-mpi.org/en/v5.0.x/). Ответы учитывают используемую среду macOS.

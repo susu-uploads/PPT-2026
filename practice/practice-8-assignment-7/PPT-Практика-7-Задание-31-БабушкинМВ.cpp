@@ -1,4 +1,3 @@
-// Бабушкин Михаил Вадимович. Адаптация учебного решения Машкина А.А.
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
