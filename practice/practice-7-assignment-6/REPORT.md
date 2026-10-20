@@ -4,9 +4,349 @@
 
 ## Реализация
 
-task-17 считает буквы a..z, task-18 интегрирует 4/(1+x²) на [0,1], task-19 умножает квадратные матрицы. --point-to-point включает зависимые варианты со звёздочкой. Корневой процесс проверяет вход и сообщает ошибку всем участникам. Матрицы дополняются нулевыми строками, а буферы выделяются динамически. В примере задания 17 указаны n=3 и строка rvtabc длины 6; такой ввод отклоняется, поскольку выбран строгий приоритет текстовых ограничений.
+task-17 считает буквы a..z, task-18 интегрирует 4/(1+x²) на [0,1], task-19 умножает квадратные матрицы. --point-to-point включает зависимые варианты со звёздочкой. Корневой процесс проверяет вход и сообщает ошибку всем участникам. Матрицы дополняются нулевыми строками, а буферы выделяются динамически. В примере задания 17 указаны n=3 и строка rvtabc длины 6; такой ввод отклоняется как не соответствующий ограничениям из условия.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами. Формулировки заданий и оригинальные вложения сохранены.
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+
+## ИСХОДНЫЙ КОД
+
+### PPT-Практика-6-Задание-17-БабушкинМВ.cpp
+
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <mpi.h>
+#include <string>
+#include <vector>
+
+int main(int argc, char **argv) {
+  // Флаги выбирают точечные обмены и режим измерения времени.
+  bool point = false, benchmark = false;
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    if (arg == "--point-to-point")
+      point = true;
+    else if (arg == "--benchmark")
+      benchmark = true;
+    else {
+      std::cerr << "Флаги: --point-to-point, --benchmark.\n";
+      return 2;
+    }
+  }
+  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+  MPI_Init(&argc, &argv);
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // Длина и буфер строки передаются всем процессам; ввод читает только ранг 0.
+  int n = 0;
+  char buffer[101] = {};
+  if (rank == 0) {
+    std::string input;
+    if (!(std::cin >> n >> input) || n < 1 || n > 100 ||
+        input.size() != static_cast<size_t>(n) ||
+        !std::all_of(input.begin(), input.end(),
+                     [](char c) { return c >= 'a' && c <= 'z'; })) {
+      n = 0;
+      std::cerr << "Нужны длина 1..100 и строка этой длины из a..z.\n";
+    } else
+      std::copy(input.begin(), input.end(), buffer);
+  }
+  // Первая передача сообщает длину; нулевая длина согласованно сигнализирует об ошибке ввода.
+  if (point) {
+    if (rank == 0)
+      for (int p = 1; p < size; ++p)
+        MPI_Send(&n, 1, MPI_INT, p, 0, MPI_COMM_WORLD);
+    else
+      MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  } else
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  if (!n) {
+    MPI_Finalize();
+    return 2;
+  }
+  // Для измерения короткая операция повторяется 1000 раз; время затем делится на это число.
+  const int repeats = benchmark ? 1000 : 1;
+  int counts[26] = {};
+  if (benchmark)
+    MPI_Barrier(MPI_COMM_WORLD);
+  const double start = MPI_Wtime();
+  // В каждом повторении строка рассылается заново выбранным способом.
+  for (int repeat = 0; repeat < repeats; ++repeat) {
+    if (point) {
+      if (rank == 0)
+        for (int p = 1; p < size; ++p)
+          MPI_Send(buffer, n, MPI_CHAR, p, 1, MPI_COMM_WORLD);
+      else
+        MPI_Recv(buffer, n, MPI_CHAR, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    } else
+      MPI_Bcast(buffer, n, MPI_CHAR, 0, MPI_COMM_WORLD);
+    // Счётчики очищаются, чтобы повторы не накапливали частоты.
+    std::fill(counts, counts + 26, 0);
+    // Буквы алфавита циклически распределены по рангам; каждую букву считает один процесс.
+    for (int letter = rank; letter < 26; letter += size)
+      for (int i = 0; i < n; ++i)
+        if (buffer[i] == 'a' + letter)
+          ++counts[letter];
+  }
+
+  if (benchmark) {
+    const double elapsed = MPI_Wtime() - start;
+    double maximum;
+    // Вне измеряемого участка определяется наибольшее время среди процессов.
+    MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (rank == 0)
+      std::printf("Time = %.12f\nRepetitions = %d\n", maximum / repeats,
+                  repeats);
+  }
+
+  for (int letter = rank; letter < 26; letter += size)
+    if (counts[letter])
+      std::printf("%c = %d\n", 'a' + letter, counts[letter]);
+
+  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+  MPI_Finalize();
+}
+```
+
+### PPT-Практика-6-Задание-18-БабушкинМВ.cpp
+
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <mpi.h>
+#include <string>
+#include <vector>
+
+int main(int argc, char **argv) {
+  // Основной вариант использует коллективные операции, дополнительный — точечные.
+  bool point = false, benchmark = false;
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    if (arg == "--point-to-point")
+      point = true;
+    else if (arg == "--benchmark")
+      benchmark = true;
+    else {
+      std::cerr << "Флаги: --point-to-point, --benchmark.\n";
+      return 2;
+    }
+  }
+  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+  MPI_Init(&argc, &argv);
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // N читает ранг 0; положительное значение проверяется до вычислений.
+  long long n = 0;
+  if (rank == 0 && (!(std::cin >> n) || n <= 0)) {
+    n = 0;
+    std::cerr << "Нужно N > 0.\n";
+  }
+  // Размер задачи сообщается всем процессам; ноль служит признаком ошибки.
+  if (point) {
+    if (rank == 0)
+      for (int p = 1; p < size; ++p)
+        MPI_Send(&n, 1, MPI_LONG_LONG_INT, p, 0, MPI_COMM_WORLD);
+    else
+      MPI_Recv(&n, 1, MPI_LONG_LONG_INT, 0, 0, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+  } else
+    MPI_Bcast(&n, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+  if (!n) {
+    MPI_Finalize();
+    return 2;
+  }
+  // Смежные диапазоны отличаются не более чем на одну итерацию; остаток распределён первым рангам.
+  const long long base = n / size, remainder = n % size;
+  const long long begin = rank * base + std::min<long long>(rank, remainder);
+  const long long end = begin + base + (rank < remainder);
+  const int repeats = 1;
+  if (benchmark)
+    MPI_Barrier(MPI_COMM_WORLD);
+  const double start = MPI_Wtime();
+  double local = 0, total = 0;
+  // Метод средних прямоугольников интегрирует 4/(1+x*x) на отрезке [0,1].
+  const double h = 1.0 / n;
+  // Каждый процесс вычисляет только свою частичную сумму.
+  for (long long i = begin; i < end; ++i) {
+    const double x = (i + 0.5) * h;
+    local += 4.0 / (1.0 + x * x);
+  }
+  if (point) {
+    if (rank == 0) {
+      total = local;
+      for (int p = 1; p < size; ++p) {
+        double value;
+        MPI_Recv(&value, 1, MPI_DOUBLE, p, 1, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        total += value;
+      }
+    } else
+      MPI_Send(&local, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+  } else
+    // В коллективном варианте частичные суммы складываются на корневом процессе.
+    MPI_Reduce(&local, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  if (benchmark) {
+    const double elapsed = MPI_Wtime() - start;
+    double maximum;
+    // Максимум времени измеряется отдельной служебной редукцией после вычисления.
+    MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (rank == 0)
+      std::printf("Time = %.12f\nRepetitions = %d\n", maximum / repeats,
+                  repeats);
+  }
+
+  if (rank == 0)
+    // Только корень располагает общей суммой и выводит итоговое приближение pi.
+    std::printf("pi = %.8f\n", total * h);
+
+  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+  MPI_Finalize();
+}
+```
+
+### PPT-Практика-6-Задание-19-БабушкинМВ.cpp
+
+```cpp
+#include <algorithm>
+#include <cstdio>
+#include <iostream>
+#include <mpi.h>
+#include <string>
+#include <vector>
+
+int main(int argc, char **argv) {
+  // Режим выбирает коллективное или точечное распределение и сбор блоков.
+  bool point = false, benchmark = false;
+  for (int i = 1; i < argc; ++i) {
+    const std::string arg = argv[i];
+    if (arg == "--point-to-point")
+      point = true;
+    else if (arg == "--benchmark")
+      benchmark = true;
+    else {
+      std::cerr << "Флаги: --point-to-point, --benchmark.\n";
+      return 2;
+    }
+  }
+  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+  MPI_Init(&argc, &argv);
+  int rank, size;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+  // Ранг 0 читает размер и обе матрицы, проверяя ограничения и полноту ввода.
+  int n = 0;
+  std::vector<double> a, b;
+  if (rank == 0) {
+    if (!(std::cin >> n) || n < 1 || n > 10)
+      n = 0;
+    if (n) {
+      a.resize(n * n);
+      b.resize(n * n);
+      for (double &x : a)
+        if (!(std::cin >> x))
+          n = 0;
+      for (double &x : b)
+        if (!(std::cin >> x))
+          n = 0;
+    }
+    if (!n)
+      std::cerr << "Нужны размер 1..10 и две полные матрицы.\n";
+  }
+  // Все процессы получают размер; ноль обеспечивает одинаковое завершение при ошибке.
+  if (point) {
+    if (rank == 0)
+      for (int p = 1; p < size; ++p)
+        MPI_Send(&n, 1, MPI_INT, p, 0, MPI_COMM_WORLD);
+    else
+      MPI_Recv(&n, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  } else
+    MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  if (!n) {
+    MPI_Finalize();
+    return 2;
+  }
+  // Число строк округляется вверх, чтобы Scatter/Gather использовали равные блоки.
+  const int rows = (n + size - 1) / size, count = rows * n;
+  // Дополнительные строки заполняются нулями; после сбора они не выводятся.
+  a.resize(count * size);
+  b.resize(n * n);
+  std::vector<double> c(count * size), local_a(count), local_c(count);
+  const int repeats = benchmark ? 1000 : 1;
+  if (benchmark)
+    MPI_Barrier(MPI_COMM_WORLD);
+  const double start = MPI_Wtime();
+  for (int repeat = 0; repeat < repeats; ++repeat) {
+    if (point) {
+      if (rank == 0) {
+        std::copy_n(a.begin(), count, local_a.begin());
+        for (int p = 1; p < size; ++p) {
+          MPI_Send(a.data() + p * count, count, MPI_DOUBLE, p, 1,
+                   MPI_COMM_WORLD);
+          MPI_Send(b.data(), n * n, MPI_DOUBLE, p, 2, MPI_COMM_WORLD);
+        }
+      } else {
+        MPI_Recv(local_a.data(), count, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        MPI_Recv(b.data(), n * n, MPI_DOUBLE, 0, 2, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+      }
+    } else {
+      // Каждый процесс получает свой непрерывный блок строк матрицы A.
+      MPI_Scatter(a.data(), count, MPI_DOUBLE, local_a.data(), count,
+                  MPI_DOUBLE, 0, MPI_COMM_WORLD);
+      // Матрица B нужна каждому процессу целиком для вычисления всех столбцов своего блока.
+      MPI_Bcast(b.data(), n * n, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    }
+    // Процесс вычисляет строки C только из своего блока A и общей копии B.
+    for (int i = 0; i < rows; ++i)
+      for (int j = 0; j < n; ++j) {
+        double sum = 0;
+        for (int k = 0; k < n; ++k)
+          sum += local_a[i * n + k] * b[k * n + j];
+        local_c[i * n + j] = sum;
+      }
+    if (point) {
+      if (rank == 0) {
+        std::copy(local_c.begin(), local_c.end(), c.begin());
+        for (int p = 1; p < size; ++p)
+          MPI_Recv(c.data() + p * count, count, MPI_DOUBLE, p, 3,
+                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      } else
+        MPI_Send(local_c.data(), count, MPI_DOUBLE, 0, 3, MPI_COMM_WORLD);
+    } else
+      // Блоки C собираются на корне в порядке рангов, включая нулевое дополнение.
+      MPI_Gather(local_c.data(), count, MPI_DOUBLE, c.data(), count, MPI_DOUBLE,
+                 0, MPI_COMM_WORLD);
+  }
+
+  if (benchmark) {
+    const double elapsed = MPI_Wtime() - start;
+    double maximum;
+    // Служебное измерение максимума времени не входит в измеряемый участок.
+    MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    if (rank == 0)
+      std::printf("Time = %.12f\nRepetitions = %d\n", maximum / repeats,
+                  repeats);
+  }
+
+  // Выводятся только исходные n строк, а строки дополнения отбрасываются.
+  if (rank == 0)
+    for (int i = 0; i < n; ++i)
+      for (int j = 0; j < n; ++j)
+        std::printf("%.2f%c", c[i * n + j], j + 1 == n ? '\n' : ' ');
+
+  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+  MPI_Finalize();
+}
+```
 
 ## Среда и сборка
 
@@ -123,9 +463,8 @@ MPI_Scatter раздаёт равные блоки корневого sendbuf п
 
 Коллективные и точечные варианты дали одинаковые частоты букв, π и произведения матриц. Проверены длина 100, некратные блоки, P>n и согласованное завершение при ошибках. На малых данных коммуникационные расходы могут превосходить вычисления; конкретное сравнение времени приведено в таблице.
 
-## Источники и адаптация
+## Источники
 
 - [Лабораторная работа №6.pdf](<Лабораторная работа №6.pdf>).
 - [Типовые контрольные вопросы №6.docx](<Типовые контрольные вопросы №6.docx>): исходные контрольные вопросы.
-- Готовые решения Машкина А.А., `Lab6.cpp`, архив «Машкин А.А. Работы по MPI.zip»; сверка с проектами Иванова Я.А. из предоставленного каталога University. Это источники адаптации, а не результаты измерений данного компьютера.
 - [Спецификации OpenMP](https://www.openmp.org/specifications/) и [документация Open MPI](https://docs.open-mpi.org/en/v5.0.x/). Ответы учитывают используемую среду macOS.

@@ -1,4 +1,3 @@
-// Бабушкин Михаил Вадимович. Адаптация учебного решения Машкина А.А.
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
@@ -37,7 +36,6 @@ int main(int argc, char **argv) {
     } else
       std::copy(input.begin(), input.end(), buffer);
   }
-  // Нулевая длина сообщает всем процессам об ошибке ввода.
   if (point) {
     if (rank == 0)
       for (int p = 1; p < size; ++p)

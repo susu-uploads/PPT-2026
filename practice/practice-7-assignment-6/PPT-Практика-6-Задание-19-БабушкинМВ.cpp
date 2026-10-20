@@ -1,4 +1,3 @@
-// Бабушкин Михаил Вадимович. Адаптация учебного решения Машкина А.А.
 #include <algorithm>
 #include <cstdio>
 #include <iostream>
@@ -55,7 +54,6 @@ int main(int argc, char **argv) {
     return 2;
   }
   const int rows = (n + size - 1) / size, count = rows * n;
-  // Дополнение нулевыми строками сохраняет равные блоки Scatter/Gather.
   a.resize(count * size);
   b.resize(n * n);
   std::vector<double> c(count * size), local_a(count), local_c(count);
