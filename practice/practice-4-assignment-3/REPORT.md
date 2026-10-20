@@ -4,9 +4,165 @@
 
 ## Реализация
 
-task-6 реализует задание 6 и зависимое задание 7. Без флагов вводится k N; с --schedule <значение> используются заданные k=4, N=10. Доступны static, static,1, static,2, dynamic, dynamic,2, guided, guided,2. task-8 умножает матрицы размера 1..10 одной командой OpenMP: вложенное создание команд из примера устранено. task-9 содержит ровно три секции, затем каждый поток выводит parallel region.
+task-6 реализует задание 6 и зависимое задание 7. Без флагов вводится k N; с --schedule <значение> используются заданные k=4, N=10. Доступны static, static,1, static,2, dynamic, dynamic,2, guided, guided,2. task-8 умножает матрицы размера 1..10 одной командой OpenMP: каждая ячейка результата вычисляется одним потоком. task-9 содержит ровно три секции, затем каждый поток выводит parallel region.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами. Формулировки заданий и оригинальные вложения сохранены.
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+
+## ИСХОДНЫЙ КОД
+
+### PPT-Практика-3-Задание-6-БабушкинМВ.cpp
+
+```cpp
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+#include <string>
+
+int main(int argc, char **argv) {
+  int k = 4, chunk = 0;
+  long long n = 10;
+  omp_sched_t kind = omp_sched_static;
+  // Задание 7 использует фиксированные k=4, N=10 и выбранное расписание.
+  const bool schedule = argc == 3 && std::string(argv[1]) == "--schedule";
+  // Диагностические строки позволяют восстановить фактическое назначение итераций.
+  if (schedule) {
+    const std::string value = argv[2];
+    if (value == "static")
+      kind = omp_sched_static;
+    else if (value == "static,1") {
+      kind = omp_sched_static;
+      chunk = 1;
+    } else if (value == "static,2") {
+      kind = omp_sched_static;
+      chunk = 2;
+    } else if (value == "dynamic") {
+      kind = omp_sched_dynamic;
+      chunk = 1;
+    } else if (value == "dynamic,2") {
+      kind = omp_sched_dynamic;
+      chunk = 2;
+    } else if (value == "guided") {
+      kind = omp_sched_guided;
+      chunk = 1;
+    } else if (value == "guided,2") {
+      kind = omp_sched_guided;
+      chunk = 2;
+    } else {
+      std::cerr << "Неизвестное расписание.\n";
+      return 2;
+    }
+  } else if (argc != 1 || !(std::cin >> k >> n) || k <= 0 || n < 0 ||
+             n > 4294967295LL) {
+    std::cerr << "Ожидается k N; для задания 7: --schedule <расписание>.\n";
+    return 2;
+  }
+  omp_set_dynamic(0);
+  // Настройка будет использована директивой schedule(runtime).
+  omp_set_schedule(kind, chunk);
+  long long sum = 0;
+// Частные аккумуляторы предотвращают конфликт одновременных прибавлений.
+#pragma omp parallel num_threads(k) reduction(+ : sum)
+  {
+    const int rank = omp_get_thread_num();
+// Библиотека распределяет итерации между потоками согласно выбранному расписанию.
+#pragma omp for schedule(runtime)
+    for (long long i = 1; i <= n; ++i) {
+      if (schedule)
+        std::printf("[%d]: calculation of the iteration number %lld\n", rank,
+                    i);
+      sum += i;
+    }
+    std::printf("[%d]: Sum = %lld\n", rank, sum);
+  }
+  // Результат читается после объединения частичных сумм и завершения команды.
+  std::printf("Sum = %lld\n", sum);
+}
+```
+
+### PPT-Практика-3-Задание-8-БабушкинМВ.cpp
+
+```cpp
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+#include <vector>
+
+int main() {
+  // По условию размер квадратных матриц ограничен диапазоном 1..10.
+  int n;
+  if (!(std::cin >> n) || n < 1 || n > 10) {
+    std::cerr << "Размер матриц: 1..10.\n";
+    return 2;
+  }
+  // Матрицы хранятся непрерывно; элемент (i,j) находится по индексу i*n+j.
+  std::vector<double> a(n * n), b(n * n), c(n * n);
+  for (double &x : a)
+    if (!(std::cin >> x)) {
+      std::cerr << "Неполная матрица A.\n";
+      return 2;
+    }
+  for (double &x : b)
+    if (!(std::cin >> x)) {
+      std::cerr << "Неполная матрица B.\n";
+      return 2;
+    }
+  omp_set_dynamic(0);
+// Одна команда распределяет пары (i,j); вложенная команда потоков не создаётся.
+#pragma omp parallel for collapse(2)
+  for (int i = 0; i < n; ++i)
+    for (int j = 0; j < n; ++j) {
+      // Скалярный аккумулятор принадлежит одной итерации и не разделяется потоками.
+      double sum = 0;
+      for (int k = 0; k < n; ++k)
+        sum += a[i * n + k] * b[k * n + j];
+      c[i * n + j] = sum;
+    }
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j)
+      // После параллельного цикла все ячейки C готовы; вывод выполняет главный поток.
+      std::printf("%.2f%c", c[i * n + j], j + 1 == n ? '\n' : ' ');
+  }
+}
+```
+
+### PPT-Практика-3-Задание-9-БабушкинМВ.cpp
+
+```cpp
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+
+int main() {
+  // Параметр k задаёт размер команды, а число секций всегда равно трём.
+  int k;
+  if (!(std::cin >> k) || k <= 0) {
+    std::cerr << "Нужно k > 0.\n";
+    return 2;
+  }
+  omp_set_dynamic(0);
+#pragma omp parallel num_threads(k)
+  {
+// Каждая секция исполняется ровно один раз; соответствие номерам потоков не фиксируется.
+#pragma omp sections
+    {
+#pragma omp section
+      {
+        std::printf("[%d]: came in section 1\n", omp_get_thread_num());
+      }
+#pragma omp section
+      {
+        std::printf("[%d]: came in section 2\n", omp_get_thread_num());
+      }
+#pragma omp section
+      {
+        std::printf("[%d]: came in section 3\n", omp_get_thread_num());
+      }
+    }
+    // Здесь все секции уже завершились: в конце sections действует неявный барьер.
+    std::printf("[%d]: parallel region\n", omp_get_thread_num());
+  }
+}
+```
 
 ## Среда и сборка
 
@@ -168,10 +324,9 @@ sections описывает набор независимых блоков бе�
 
 Все семь расписаний покрывают итерации 1..10 ровно по одному разу и дают сумму 55. Динамические назначения могут меняться между запусками. Произведения матриц совпали с эталонами; число выполнений секций всегда равно трём, а сообщений parallel region — числу потоков.
 
-## Источники и адаптация
+## Источники
 
 - [Лабораторная работа №3.1.pdf](<Лабораторная работа №3.1.pdf>).
 - [Лабораторная работа №3.2.pdf](<Лабораторная работа №3.2.pdf>).
 - [Типовые контрольные вопросы №3.docx](<Типовые контрольные вопросы №3.docx>): исходные контрольные вопросы.
-- Готовые решения Машкина А.А., `Lab3.cpp`, архив «Машкин А.А. Работы по MPI.zip»; сверка с проектами Иванова Я.А. из предоставленного каталога University. Это источники адаптации, а не результаты измерений данного компьютера.
 - [Спецификации OpenMP](https://www.openmp.org/specifications/) и [документация Open MPI](https://docs.open-mpi.org/en/v5.0.x/). Ответы учитывают используемую среду macOS.

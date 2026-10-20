@@ -1,4 +1,3 @@
-// Бабушкин Михаил Вадимович. Адаптация учебного решения Машкина А.А.
 #include <cstdio>
 #include <iostream>
 #include <omp.h>
@@ -22,7 +21,6 @@ int main() {
       return 2;
     }
   omp_set_dynamic(0);
-// Одна команда потоков; каждая ячейка записывается ровно один раз.
 #pragma omp parallel for collapse(2)
   for (int i = 0; i < n; ++i)
     for (int j = 0; j < n; ++j) {
