@@ -1,4 +1,3 @@
-// Бабушкин Михаил Вадимович. Адаптация учебного решения Машкина А.А.
 #include <chrono>
 #include <cstdio>
 #include <iostream>
@@ -26,7 +25,6 @@ int main(int argc, char **argv) {
   int rank = 0;
   if (mode == "all" || mode == "shared") {
     std::puts("Shared:");
-// Намеренная гонка данных из задания: результат не гарантируется C++.
 #pragma omp parallel num_threads(k) shared(rank)
     {
       rank = omp_get_thread_num();

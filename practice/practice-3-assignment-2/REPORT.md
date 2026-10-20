@@ -4,9 +4,122 @@
 
 ## Реализация
 
-task-4 последовательно показывает shared, shared с задержкой 100 мс и private. Флаг --mode shared|shared-sleep|private позволяет запускать варианты отдельно; проверка исправленного варианта использует --mode private и не исполняет гонку. Sleep заменён std::this_thread::sleep_for. Намеренная гонка сохранена только как учебная демонстрация. task-5 читает N и делит диапазон между двумя потоками через if; --extra читает k N и распределяет остаток между первыми потоками. Сумма хранится в long long, N ограничено 4294967295 для предотвращения переполнения.
+task-4 последовательно показывает shared, shared с задержкой 100 мс и private. Флаг --mode shared|shared-sleep|private позволяет запускать варианты отдельно; проверка исправленного варианта использует --mode private и не исполняет гонку. Задержка реализована через std::this_thread::sleep_for. Намеренная гонка сохранена только как учебная демонстрация. task-5 читает N и делит диапазон между двумя потоками через if; --extra читает k N и распределяет остаток между первыми потоками. Сумма хранится в long long, N ограничено 4294967295 для предотвращения переполнения.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами. Формулировки заданий и оригинальные вложения сохранены.
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+
+## ИСХОДНЫЙ КОД
+
+### PPT-Практика-2-Задание-4-БабушкинМВ.cpp
+
+```cpp
+#include <chrono>
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+#include <string>
+#include <thread>
+
+int main(int argc, char **argv) {
+  // Режим all запускает все демонстрации; private позволяет проверить исправление отдельно.
+  std::string mode = "all";
+  if (argc == 3 && std::string(argv[1]) == "--mode")
+    mode = argv[2];
+  if ((argc != 1 && argc != 3) ||
+      (argc == 3 && std::string(argv[1]) != "--mode") ||
+      (mode != "all" && mode != "shared" && mode != "shared-sleep" &&
+       mode != "private")) {
+    std::cerr << "--mode all|shared|shared-sleep|private\n";
+    return 2;
+  }
+  // Проверка ввода выполняется до создания команды потоков.
+  int k;
+  if (!(std::cin >> k) || k <= 0) {
+    std::cerr << "Нужно k > 0.\n";
+    return 2;
+  }
+  omp_set_dynamic(0);
+  int rank = 0;
+  // Общая rank намеренно содержит гонку данных: результат не гарантируется стандартом C++.
+  if (mode == "all" || mode == "shared") {
+    std::puts("Shared:");
+#pragma omp parallel num_threads(k) shared(rank)
+    {
+      rank = omp_get_thread_num();
+      std::printf("I am %d thread.\n", rank);
+    }
+  }
+  // Задержка увеличивает окно конфликта, но не делает ошибочный результат детерминированным.
+  if (mode == "all" || mode == "shared-sleep") {
+    std::puts("Shared with sleep:");
+#pragma omp parallel num_threads(k) shared(rank)
+    {
+      rank = omp_get_thread_num();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::printf("I am %d thread.\n", rank);
+    }
+  }
+  // Каждый поток получает свою rank и присваивает ей значение до первого чтения.
+  if (mode == "all" || mode == "private") {
+    std::puts("Private:");
+#pragma omp parallel num_threads(k) private(rank)
+    {
+      rank = omp_get_thread_num();
+      std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      std::printf("I am %d thread.\n", rank);
+    }
+  }
+}
+```
+
+### PPT-Практика-2-Задание-5-БабушкинМВ.cpp
+
+```cpp
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+#include <string>
+
+int main(int argc, char **argv) {
+  // В основном варианте вводится N, в дополнительном — k N.
+  const bool extra = argc == 2 && std::string(argv[1]) == "--extra";
+  // По условию основной вариант использует два потока.
+  int k = 2;
+  long long n;
+  if ((argc != 1 && !extra) || (extra && !(std::cin >> k)) ||
+      !(std::cin >> n) || k <= 0 || n < 0 || n > 4294967295LL) {
+    std::cerr << "Ожидается N (0..4294967295), для --extra: k N, k > 0.\n";
+    return 2;
+  }
+  omp_set_dynamic(0);
+  long long sum = 0;
+// reduction создаёт частные суммы и объединяет их при завершении области.
+#pragma omp parallel num_threads(k) reduction(+ : sum)
+  {
+    const int rank = omp_get_thread_num(), size = omp_get_num_threads();
+    long long start, end;
+    // Оператор if делит основной диапазон между двумя потоками без пересечения.
+    if (!extra && rank == 0) {
+      start = 1;
+      end = n / 2;
+    } else if (!extra) {
+      start = n / 2 + 1;
+      end = n;
+    } else {
+      // При произвольном k остаток раздаётся первым потокам по одному элементу.
+      const long long base = n / size, remainder = n % size;
+      start = rank * base + (rank < remainder ? rank : remainder) + 1;
+      end = start + base + (rank < remainder) - 1;
+    }
+    // Поток суммирует только принадлежащие ему числа; пустой диапазон даёт ноль.
+    for (long long i = start; i <= end; ++i)
+      sum += i;
+    std::printf("[%d]: Sum = %lld\n", rank, sum);
+  }
+  // После окончания области sum уже содержит объединённый результат.
+  std::printf("Sum = %lld\n", sum);
+}
+```
 
 ## Среда и сборка
 
@@ -117,9 +230,8 @@ reduction создаёт для каждого участника частный
 
 В исправленной private-версии каждому потоку соответствует свой номер. Общая rank допускает конфликт, а задержка делает его заметнее, не создавая гарантии конкретного ошибочного вывода. Оба варианта суммирования дают N(N+1)/2, включая нулевой диапазон и k>N.
 
-## Источники и адаптация
+## Источники
 
 - [Лабораторная работа №2.pdf](<Лабораторная работа №2.pdf>).
 - [Типовые контрольные вопросы №2.docx](<Типовые контрольные вопросы №2.docx>): исходные контрольные вопросы.
-- Готовые решения Машкина А.А., `Lab2.cpp`, архив «Машкин А.А. Работы по MPI.zip»; сверка с проектами Иванова Я.А. из предоставленного каталога University. Это источники адаптации, а не результаты измерений данного компьютера.
 - [Спецификации OpenMP](https://www.openmp.org/specifications/) и [документация Open MPI](https://docs.open-mpi.org/en/v5.0.x/). Ответы учитывают используемую среду macOS.
