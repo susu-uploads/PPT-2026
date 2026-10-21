@@ -10,7 +10,7 @@ task-6 реализует задание 6 и зависимое задание 
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-3-Задание-6-БабушкинМВ.cpp
+### omp-loop-scheduling.cpp
 
 ```cpp
 #include <cstdio>
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-3-Задание-8-БабушкинМВ.cpp
+### omp-matrix-multiply.cpp
 
 ```cpp
 #include <cstdio>
@@ -125,7 +125,7 @@ int main() {
 }
 ```
 
-### PPT-Практика-3-Задание-9-БабушкинМВ.cpp
+### omp-sections.cpp
 
 ```cpp
 #include <cstdio>
