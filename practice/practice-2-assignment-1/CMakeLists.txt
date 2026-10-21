@@ -6,10 +6,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(OpenMP REQUIRED COMPONENTS CXX)
 
-add_executable(task-2 "PPT-Практика-1-Задание-2-БабушкинМВ.cpp")
+add_executable(task-2 "omp-hello-world.cpp")
 target_compile_options(task-2 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-2 PRIVATE OpenMP::OpenMP_CXX)
 
-add_executable(task-3 "PPT-Практика-1-Задание-3-БабушкинМВ.cpp")
+add_executable(task-3 "omp-thread-ids.cpp")
 target_compile_options(task-3 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-3 PRIVATE OpenMP::OpenMP_CXX)

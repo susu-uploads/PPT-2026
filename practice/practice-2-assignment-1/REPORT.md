@@ -10,7 +10,7 @@
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-1-Задание-2-БабушкинМВ.cpp
+### omp-hello-world.cpp
 
 ```cpp
 #include <cstdio>
@@ -28,7 +28,7 @@ int main() {
 }
 ```
 
-### PPT-Практика-1-Задание-3-БабушкинМВ.cpp
+### omp-thread-ids.cpp
 
 ```cpp
 #include <cstdio>
