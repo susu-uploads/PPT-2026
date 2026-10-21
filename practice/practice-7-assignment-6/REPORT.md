@@ -10,7 +10,7 @@ task-17 считает буквы a..z, task-18 интегрирует 4/(1+x²)
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-6-Задание-17-БабушкинМВ.cpp
+### mpi-letter-count.cpp
 
 ```cpp
 #include <algorithm>
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-6-Задание-18-БабушкинМВ.cpp
+### mpi-pi.cpp
 
 ```cpp
 #include <algorithm>
@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-6-Задание-19-БабушкинМВ.cpp
+### mpi-matrix-multiply.cpp
 
 ```cpp
 #include <algorithm>

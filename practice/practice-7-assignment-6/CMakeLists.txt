@@ -6,14 +6,14 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(MPI REQUIRED COMPONENTS CXX)
 
-add_executable(task-17 "PPT-Практика-6-Задание-17-БабушкинМВ.cpp")
+add_executable(task-17 "mpi-letter-count.cpp")
 target_compile_options(task-17 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-17 PRIVATE MPI::MPI_CXX)
 
-add_executable(task-18 "PPT-Практика-6-Задание-18-БабушкинМВ.cpp")
+add_executable(task-18 "mpi-pi.cpp")
 target_compile_options(task-18 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-18 PRIVATE MPI::MPI_CXX)
 
-add_executable(task-19 "PPT-Практика-6-Задание-19-БабушкинМВ.cpp")
+add_executable(task-19 "mpi-matrix-multiply.cpp")
 target_compile_options(task-19 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-19 PRIVATE MPI::MPI_CXX)
