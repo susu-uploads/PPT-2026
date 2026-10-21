@@ -10,7 +10,7 @@
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-7-Задание-31-БабушкинМВ.cpp
+### hybrid-hello-world.cpp
 
 ```cpp
 #include <algorithm>
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-7-Задание-32-БабушкинМВ.cpp
+### hybrid-pi.cpp
 
 ```cpp
 #include <algorithm>
