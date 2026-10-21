@@ -77,7 +77,7 @@ brew install llvm libomp open-mpi cmake
 cmake -S . -B .cache/build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++"
 cmake --build .cache/build -j 4
-python3 verify.py
+ctest --test-dir .cache/build --output-on-failure
 ```
 
 Число потоков для программ без собственного параметра задаёт `OMP_NUM_THREADS`; динамическое изменение размера команды отключено. MPI-программы запускаются через `mpirun --bind-to none -np P`. Порядок строк от разных исполнителей не фиксируется.
