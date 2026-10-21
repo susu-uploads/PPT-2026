@@ -187,7 +187,7 @@ cmake -S . -B .cache/build -DCMAKE_BUILD_TYPE=Release \
   -DOpenMP_CXX_INCLUDE_DIR="$(brew --prefix libomp)/include" \
   -DOpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
 cmake --build .cache/build -j 4
-python3 verify.py
+ctest --test-dir .cache/build --output-on-failure
 ```
 
 Число потоков для программ без собственного параметра задаёт `OMP_NUM_THREADS`; динамическое изменение размера команды отключено. MPI-программы запускаются через `mpirun --bind-to none -np P`. Порядок строк от разных исполнителей не фиксируется.
