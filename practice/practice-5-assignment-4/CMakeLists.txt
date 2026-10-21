@@ -6,10 +6,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(MPI REQUIRED COMPONENTS CXX)
 
-add_executable(task-11 "PPT-Практика-4-Задание-11-БабушкинМВ.cpp")
+add_executable(task-11 "mpi-hello-world.cpp")
 target_compile_options(task-11 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-11 PRIVATE MPI::MPI_CXX)
 
-add_executable(task-12 "PPT-Практика-4-Задание-12-БабушкинМВ.cpp")
+add_executable(task-12 "mpi-even-odd.cpp")
 target_compile_options(task-12 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-12 PRIVATE MPI::MPI_CXX)

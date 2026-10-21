@@ -10,7 +10,7 @@
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-4-Задание-11-БабушкинМВ.cpp
+### mpi-hello-world.cpp
 
 ```cpp
 #include <cstdio>
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-4-Задание-12-БабушкинМВ.cpp
+### mpi-even-odd.cpp
 
 ```cpp
 #include <cstdio>
