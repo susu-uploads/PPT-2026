@@ -10,7 +10,7 @@ task-4 последовательно показывает shared, shared с з�
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-2-Задание-4-БабушкинМВ.cpp
+### omp-shared-private.cpp
 
 ```cpp
 #include <chrono>
@@ -72,7 +72,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-2-Задание-5-БабушкинМВ.cpp
+### omp-range-sum.cpp
 
 ```cpp
 #include <cstdio>
