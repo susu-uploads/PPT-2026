@@ -10,7 +10,7 @@
 
 ## ИСХОДНЫЙ КОД
 
-### PPT-Практика-5-Задание-13-БабушкинМВ.cpp
+### mpi-relay.cpp
 
 ```cpp
 #include <cstdio>
@@ -48,7 +48,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-5-Задание-14-БабушкинМВ.cpp
+### mpi-master.cpp
 
 ```cpp
 #include <cstdio>
@@ -78,7 +78,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-5-Задание-15-БабушкинМВ.cpp
+### mpi-ring.cpp
 
 ```cpp
 #include <cstdio>
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### PPT-Практика-5-Задание-16-БабушкинМВ.cpp
+### mpi-all-to-all.cpp
 
 ```cpp
 #include <cstdio>
