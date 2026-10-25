@@ -13,6 +13,8 @@ This repository contains one course for one academic year. Read `COURSE.md` and 
 | `lecture/lecture-<number>-<english-title>/`   | One or more original files for a lecture.                                                                        |
 | `practice/`                                   | Collection of numbered assignment directories.                                                                   |
 | `practice/practice-<number>-<english-title>/` | An assignment card, its original attachments, and any existing solution artifacts.                               |
+| `practice/final-problem/`                     | The final assignment card and any associated materials; excluded from practice numbering.                       |
+| Practice-local `CMakeLists.txt`                 | Build configuration contained within each implemented practice.                                                |
 | `TASK.md`                                     | Assignment metadata followed by the description exported from LMS. Required in every practice directory.         |
 | `library/`                                    | Optional directory for additional books or reference files supplied by the source.                               |
 | `LIBRARY.md`                                  | Bibliography table of reference names and source links at the repository root.                                   |
@@ -28,7 +30,14 @@ Naming and placement rules:
 
 - Name each course repository and directory `<EnglishAcronym>-<YYYY>`, using only English letters, digits, and hyphens. Derive the acronym from the English course title and omit programme and enrolment prefixes. Keep the approved course code unchanged. 
 - Name lecture and practice directories `lecture-<number>-<english-title>` and `practice-<number>-<english-title>`. Use lowercase English words separated by hyphens; retain the source numbering.
+- Each numbered practice corresponds to one LMS assignment. Match the practice number to the assignment number and use a descriptive topic instead of an `assignment-<number>` suffix. Keep the final assignment in `practice/final-problem/` without a number.
 - Keep files directly inside their lecture or practice directory. Do not introduce service subdirectories for assignments, solutions, attachments, or links unless requested.
+- Each implemented practice must build and reproduce its experiments from a standalone copy of its directory. Do not depend on repository-level files or sibling practices. Copy required reference implementations and source attachments into the practice without changing their contents.
+- Verify implemented practices by compilation and direct program execution without adding test files or frameworks.
+- In parameterized C++ solutions, obtain a complete set of positional arguments in main using standard conversions, or read the same values from stdin when no arguments are supplied. Print one input prompt and pass typed parameters to run. Assume valid values; do not add content validation, helper parsers, or exception handlers. In MPI programs, only rank 0 reads user input; preserve MPI lifecycle and required synchronization.
+- Cards without solutions do not require placeholder CMake projects.
+- Name solution source files after their task numbers in kebab-case, for example `task-1.cpp` or `task-3-1.cpp`. Use the numbering in the practice's assignment materials and preserve the language's file extension.
+- Use four spaces per indentation level in C++ sources and code examples. Keep each statement on one line; do not wrap calls, stream expressions, or string literals to limit line length.
 - English directory names do not require translating or renaming the original files.
 - Replace or remove example lecture and practice directories when creating a course; do not present them as exported materials.
 - If no additional literature is listed, create neither `library` nor `LIBRARY.md`.
