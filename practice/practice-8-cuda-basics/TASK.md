@@ -1,7 +1,7 @@
 ---
 ru: "Задание №8"
 en: "Assignment 8"
-code: "practice-9-assignment-8"
+code: "practice-8-cuda-basics"
 origin: "https://edu.susu.ru/mod/assign/view.php?id=8720542"
 ---
 
