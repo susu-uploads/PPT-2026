@@ -12,12 +12,12 @@ BASE=Path(__file__).resolve().parent
 BUILD=BASE/'.cache/build'
 rows=[]
 
-def measure(command,data,threads=1):
+def measure(command,threads=1):
     """Проверить результат каждого запуска и вернуть пять внутренних измерений времени."""
     samples=[]
     for attempt in range(6):
         env=dict(os.environ,OMP_NUM_THREADS=str(threads),OMP_DYNAMIC='FALSE',OMP_PROC_BIND='FALSE')
-        result=subprocess.run(command,input=data,text=True,capture_output=True,env=env,timeout=120)
+        result=subprocess.run(command,stdin=subprocess.DEVNULL,text=True,capture_output=True,env=env,timeout=120)
         if result.returncode: raise RuntimeError(result.stderr)
         pi=re.search(r'pi = ([0-9.]+)',result.stdout)
         if pi and abs(float(pi[1])-math.pi)>=1e-8: raise AssertionError(result.stdout)
@@ -44,9 +44,13 @@ cases=[(17,'100\n'+word+'\n','строка, n=100'),
 for task,data,label in cases:
     for p in [1,2,4]:
         for point in [False,True]:
-            command=['mpirun','--bind-to','none','-np',str(p),str(BUILD/f'task-{task}'),'--benchmark']
-            if point: command.append('--point-to-point')
-            samples=measure(command,data)
+            parameters=data.split()
+            if task==17:
+                arguments=[*parameters,str(int(point)),'1']
+            else:
+                arguments=[parameters[0],str(int(point)),'1',*parameters[1:]]
+            command=['mpirun','--bind-to','none','-np',str(p),str(BUILD/f'task-{task}'),*arguments]
+            samples=measure(command)
             row={'task':task,'case':label,'processes':p,
                  'mode':'point-to-point' if point else 'collective',
                  'seconds':samples,'median':statistics.median(samples)}
