@@ -1,7 +1,7 @@
 ---
 ru: "Задание №9"
 en: "Assignment 9"
-code: "practice-10-assignment-9"
+code: "practice-9-cuda-pi"
 origin: "https://edu.susu.ru/mod/assign/view.php?id=8720543"
 ---
 
