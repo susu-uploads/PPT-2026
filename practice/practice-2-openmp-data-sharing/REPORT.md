@@ -4,13 +4,17 @@
 
 ## Реализация
 
-task-4 последовательно показывает shared, shared с задержкой 100 мс и private. Флаг --mode shared|shared-sleep|private позволяет запускать варианты отдельно; проверка исправленного варианта использует --mode private и не исполняет гонку. Задержка реализована через std::this_thread::sleep_for. Намеренная гонка сохранена только как учебная демонстрация. task-5 читает N и делит диапазон между двумя потоками через if; --extra читает k N и распределяет остаток между первыми потоками. Сумма хранится в long long, N ограничено 4294967295 для предотвращения переполнения.
+task-4 показывает общую переменную shared, shared с задержкой 100 мс и private; режим выбирается параметром mode. Намеренная гонка сохранена как учебная демонстрация, а private использует отдельную переменную каждого потока. task-5 делит диапазон между двумя потоками в базовом варианте и распределяет остаток между первыми потоками в дополнительном. Для extra=0 задаётся k=2. Сумма хранится в long long; корректные данные задачи предполагают N от 0 до 4294967295.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+`task-4 k mode` (all, shared, shared-sleep, private); `task-5 k N extra` (0/1).
+
+Полный набор параметров передаётся позиционными аргументами. Без аргументов main выводит одно приглашение и читает те же значения через stdin; в MPI-программах ввод читает только ранг 0. Числа преобразуются стандартными функциями, дополнительная валидация содержимого ввода не выполняется.
+
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake.
 
 ## ИСХОДНЫЙ КОД
 
-### omp-shared-private.cpp
+### task-4.cpp
 
 ```cpp
 #include <chrono>
@@ -20,59 +24,61 @@ task-4 последовательно показывает shared, shared с з�
 #include <string>
 #include <thread>
 
+// Режим all запускает все демонстрации; private позволяет проверить исправление отдельно.
+int run(int k, const std::string &mode) {
+    omp_set_dynamic(0);
+    int rank = 0;
+    // Общая rank намеренно содержит гонку данных: результат не гарантируется стандартом C++.
+    if (mode == "all" || mode == "shared") {
+        std::puts("Shared:");
+        #pragma omp parallel num_threads(k) shared(rank)
+        {
+            rank = omp_get_thread_num();
+            std::printf("I am %d thread.\n", rank);
+        }
+    }
+    // Задержка увеличивает окно конфликта, но не делает ошибочный результат детерминированным.
+    if (mode == "all" || mode == "shared-sleep") {
+        std::puts("Shared with sleep:");
+        #pragma omp parallel num_threads(k) shared(rank)
+        {
+            rank = omp_get_thread_num();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::printf("I am %d thread.\n", rank);
+        }
+    }
+    // Каждый поток получает свою rank и присваивает ей значение до первого чтения.
+    if (mode == "all" || mode == "private") {
+        std::puts("Private:");
+        #pragma omp parallel num_threads(k) private(rank)
+        {
+            rank = omp_get_thread_num();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::printf("I am %d thread.\n", rank);
+        }
+    }
+    return 0;
+}
+
+// Параметры получаются до создания команды потоков.
 int main(int argc, char **argv) {
-  // Режим all запускает все демонстрации; private позволяет проверить исправление отдельно.
-  std::string mode = "all";
-  if (argc == 3 && std::string(argv[1]) == "--mode")
-    mode = argv[2];
-  if ((argc != 1 && argc != 3) ||
-      (argc == 3 && std::string(argv[1]) != "--mode") ||
-      (mode != "all" && mode != "shared" && mode != "shared-sleep" &&
-       mode != "private")) {
-    std::cerr << "--mode all|shared|shared-sleep|private\n";
-    return 2;
-  }
-  // Проверка ввода выполняется до создания команды потоков.
-  int k;
-  if (!(std::cin >> k) || k <= 0) {
-    std::cerr << "Нужно k > 0.\n";
-    return 2;
-  }
-  omp_set_dynamic(0);
-  int rank = 0;
-  // Общая rank намеренно содержит гонку данных: результат не гарантируется стандартом C++.
-  if (mode == "all" || mode == "shared") {
-    std::puts("Shared:");
-#pragma omp parallel num_threads(k) shared(rank)
-    {
-      rank = omp_get_thread_num();
-      std::printf("I am %d thread.\n", rank);
+    int k;
+    std::string mode;
+    if (argc == 3) {
+        k = std::stoi(argv[1]);
+        mode = argv[2];
+    } else if (argc == 1) {
+        std::cout << "Введите количество потоков и режим (all, shared, shared-sleep, private): ";
+        std::cin >> k >> mode;
+    } else {
+        std::cerr << "Использование: task-4 [k mode]\n";
+        return 2;
     }
-  }
-  // Задержка увеличивает окно конфликта, но не делает ошибочный результат детерминированным.
-  if (mode == "all" || mode == "shared-sleep") {
-    std::puts("Shared with sleep:");
-#pragma omp parallel num_threads(k) shared(rank)
-    {
-      rank = omp_get_thread_num();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      std::printf("I am %d thread.\n", rank);
-    }
-  }
-  // Каждый поток получает свою rank и присваивает ей значение до первого чтения.
-  if (mode == "all" || mode == "private") {
-    std::puts("Private:");
-#pragma omp parallel num_threads(k) private(rank)
-    {
-      rank = omp_get_thread_num();
-      std::this_thread::sleep_for(std::chrono::milliseconds(100));
-      std::printf("I am %d thread.\n", rank);
-    }
-  }
+    return run(k, mode);
 }
 ```
 
-### omp-range-sum.cpp
+### task-5.cpp
 
 ```cpp
 #include <cstdio>
@@ -80,44 +86,55 @@ int main(int argc, char **argv) {
 #include <omp.h>
 #include <string>
 
-int main(int argc, char **argv) {
-  // В основном варианте вводится N, в дополнительном — k N.
-  const bool extra = argc == 2 && std::string(argv[1]) == "--extra";
-  // По условию основной вариант использует два потока.
-  int k = 2;
-  long long n;
-  if ((argc != 1 && !extra) || (extra && !(std::cin >> k)) ||
-      !(std::cin >> n) || k <= 0 || n < 0 || n > 4294967295LL) {
-    std::cerr << "Ожидается N (0..4294967295), для --extra: k N, k > 0.\n";
-    return 2;
-  }
-  omp_set_dynamic(0);
-  long long sum = 0;
-// reduction создаёт частные суммы и объединяет их при завершении области.
-#pragma omp parallel num_threads(k) reduction(+ : sum)
-  {
-    const int rank = omp_get_thread_num(), size = omp_get_num_threads();
-    long long start, end;
-    // Оператор if делит основной диапазон между двумя потоками без пересечения.
-    if (!extra && rank == 0) {
-      start = 1;
-      end = n / 2;
-    } else if (!extra) {
-      start = n / 2 + 1;
-      end = n;
-    } else {
-      // При произвольном k остаток раздаётся первым потокам по одному элементу.
-      const long long base = n / size, remainder = n % size;
-      start = rank * base + (rank < remainder ? rank : remainder) + 1;
-      end = start + base + (rank < remainder) - 1;
+// По условию основной вариант использует два потока.
+int run(int k, long long n, bool extra) {
+    omp_set_dynamic(0);
+    long long sum = 0;
+    // reduction создаёт частные суммы и объединяет их при завершении области.
+    #pragma omp parallel num_threads(k) reduction(+ : sum)
+    {
+        const int rank = omp_get_thread_num(), size = omp_get_num_threads();
+        long long start, end;
+        // Оператор if делит основной диапазон между двумя потоками без пересечения.
+        if (!extra && rank == 0) {
+            start = 1;
+            end = n / 2;
+        } else if (!extra) {
+            start = n / 2 + 1;
+            end = n;
+        } else {
+            // При произвольном k остаток раздаётся первым потокам по одному элементу.
+            const long long base = n / size, remainder = n % size;
+            start = rank * base + (rank < remainder ? rank : remainder) + 1;
+            end = start + base + (rank < remainder) - 1;
+        }
+        // Поток суммирует только принадлежащие ему числа; пустой диапазон даёт ноль.
+        for (long long i = start; i <= end; ++i)
+            sum += i;
+        std::printf("[%d]: Sum = %lld\n", rank, sum);
     }
-    // Поток суммирует только принадлежащие ему числа; пустой диапазон даёт ноль.
-    for (long long i = start; i <= end; ++i)
-      sum += i;
-    std::printf("[%d]: Sum = %lld\n", rank, sum);
-  }
-  // После окончания области sum уже содержит объединённый результат.
-  std::printf("Sum = %lld\n", sum);
+    // После окончания области sum уже содержит объединённый результат.
+    std::printf("Sum = %lld\n", sum);
+    return 0;
+}
+
+// В main получаются k, N и признак дополнительного варианта extra.
+int main(int argc, char **argv) {
+    int k;
+    long long n;
+    bool extra;
+    if (argc == 4) {
+        k = std::stoi(argv[1]);
+        n = std::stoll(argv[2]);
+        extra = std::stoi(argv[3]);
+    } else if (argc == 1) {
+        std::cout << "Введите количество потоков, N и вариант (0 — базовый с k=2, 1 — дополнительный): ";
+        std::cin >> k >> n >> extra;
+    } else {
+        std::cerr << "Использование: task-5 [k N extra]\n";
+        return 2;
+    }
+    return run(k, n, extra);
 }
 ```
 
@@ -144,24 +161,19 @@ cmake -S . -B .cache/build -DCMAKE_BUILD_TYPE=Release \
   -DOpenMP_CXX_INCLUDE_DIR="$(brew --prefix libomp)/include" \
   -DOpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
 cmake --build .cache/build -j 4
-ctest --test-dir .cache/build --output-on-failure
 ```
 
 Число потоков для программ без собственного параметра задаёт `OMP_NUM_THREADS`; динамическое изменение размера команды отключено. MPI-программы запускаются через `mpirun --bind-to none -np P`. Порядок строк от разных исполнителей не фиксируется.
 
 ## Проверка
 
-```text
-OK: практика 2, 21 запусков
-```
-
-Проверки используют реальные исполняемые файлы и ограничение времени 30 с. Проверяется состав сообщений, численные результаты и ошибки входа, а не случайный порядок вывода. В демонстрации гонки №2 проверяется только исправленная private-часть; конкретный ошибочный shared-вывод не является критерием теста.
+Практика проверяется компиляцией и прямыми запусками бинарей без тестовых файлов и фреймворка. Проверяются результаты вычислений и состав сообщений; порядок строк между потоками и процессами не фиксируется. Проверяются все варианты запуска через CLI и stdin, нечётное распределение работы и пустые диапазоны. Исправленный вариант private проверяется по полному набору номеров; shared и shared-sleep остаются демонстрациями намеренной гонки без требования конкретного ошибочного результата.
 
 ## Эксперименты
 
 
 ```bash
-printf '4\n' | OMP_NUM_THREADS=4 .cache/build/task-4
+OMP_NUM_THREADS=4 .cache/build/task-4 4 all
 ```
 
 ```text
@@ -183,7 +195,7 @@ I am 1 thread.
 ```
 
 ```bash
-printf '5\n' | OMP_NUM_THREADS=4 .cache/build/task-5
+OMP_NUM_THREADS=4 .cache/build/task-5 2 5 0
 ```
 
 ```text
@@ -193,7 +205,7 @@ Sum = 15
 ```
 
 ```bash
-printf '4 2\n' | OMP_NUM_THREADS=4 .cache/build/task-5 --extra
+OMP_NUM_THREADS=4 .cache/build/task-5 4 2 1
 ```
 
 ```text
