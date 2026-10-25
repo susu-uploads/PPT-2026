@@ -1,7 +1,7 @@
 ---
 ru: "Задание №7"
 en: "Assignment 7"
-code: "practice-8-assignment-7"
+code: "practice-7-hybrid-programming"
 origin: "https://edu.susu.ru/mod/assign/view.php?id=8720538"
 ---
 

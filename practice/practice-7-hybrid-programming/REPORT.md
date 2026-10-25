@@ -4,13 +4,17 @@
 
 ## Реализация
 
-Задание 30 выполнено настройкой CMake с MPI и OpenMP. task-31 читает число потоков k и печатает все пары идентификаторов. task-32 читает N; число потоков задаёт OMP_NUM_THREADS. Режим по умолчанию hybrid; --mode serial и --mode openmp дают сопоставимые базовые расчёты в том же исходнике. Для чистого MPI используется task-18 практики 6 с той же формулой и компилятором.
+task-31 создаёт в каждом MPI-процессе команду из k OpenMP-потоков. task-32 вычисляет π в режимах serial, openmp и hybrid; количество потоков задаётся параметром k. Режимы serial и openmp запускаются одним MPI-процессом. main получает параметры на ранге 0, согласует управляющие значения и вызывает run. Проверка поддержки MPI_THREAD_FUNNELED сохранена. Локальный task-18 для чистого MPI собран из той же копии исходника, что и в практике 6.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+`task-31 k`; `task-32 N mode k` (serial, openmp, hybrid); `task-18 N point benchmark` (0/1).
+
+Полный набор параметров передаётся позиционными аргументами. Без аргументов main выводит одно приглашение и читает те же значения через stdin; в MPI-программах ввод читает только ранг 0. Числа преобразуются стандартными функциями, дополнительная валидация содержимого ввода не выполняется.
+
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake.
 
 ## ИСХОДНЫЙ КОД
 
-### hybrid-hello-world.cpp
+### task-31.cpp
 
 ```cpp
 #include <algorithm>
@@ -20,46 +24,54 @@
 #include <omp.h>
 #include <string>
 
+int run(int k, int rank, int size) {
+    omp_set_dynamic(0);
+    // Внутри каждого MPI-процесса создаётся команда из k OpenMP-потоков.
+    #pragma omp parallel num_threads(k)
+    {
+        // Печатается пара локальных идентификаторов и произведение размеров команды и группы.
+        std::printf("I am %d thread from %d process. Number of hybrid threads = %d.\n", omp_get_thread_num(), rank, omp_get_num_threads() * size);
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
-  int provided;
-  // MPI_THREAD_FUNNELED разрешает MPI-вызовы только главному потоку процесса.
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-  // Если реализация не предоставила нужный уровень, продолжать гибридный запуск нельзя.
-  if (provided < MPI_THREAD_FUNNELED) {
-    std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
-    MPI_Abort(MPI_COMM_WORLD, 2);
-  }
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  omp_set_dynamic(0);
-
-  // Количество потоков читает корень; рассылка передаёт значение всем процессам.
-  int k = 0;
-  if (rank == 0 && (!(std::cin >> k) || k <= 0)) {
-    k = 0;
-    std::cerr << "Нужно k > 0.\n";
-  }
-  MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
-  if (!k) {
+    int provided;
+    // MPI_THREAD_FUNNELED разрешает MPI-вызовы только главному потоку процесса.
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    // Если реализация не предоставила нужный уровень, продолжать гибридный запуск нельзя.
+    if (provided < MPI_THREAD_FUNNELED) {
+        std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
+        MPI_Abort(MPI_COMM_WORLD, 2);
+    }
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (argc != 1 && argc != 2) {
+        if (rank == 0)
+            std::cerr << "Нужен полный набор параметров task-31.\n";
+        MPI_Finalize();
+        return 2;
+    }
+    // Количество потоков читает корень; рассылка передаёт значение всем процессам.
+    int k = 0;
+    if (rank == 0) {
+        if (argc == 2) {
+            k = std::stoi(argv[1]);
+        } else {
+            std::cout << "Введите количество потоков в каждом процессе: ";
+            std::cin >> k;
+        }
+    }
+    MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    const int result = run(k, rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
     MPI_Finalize();
-    return 2;
-  }
-// Внутри каждого MPI-процесса создаётся команда из k OpenMP-потоков.
-#pragma omp parallel num_threads(k)
-  {
-    // Печатается пара локальных идентификаторов и произведение размеров команды и группы.
-    std::printf(
-        "I am %d thread from %d process. Number of hybrid threads = %d.\n",
-        omp_get_thread_num(), rank, omp_get_num_threads() * size);
-  }
-
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
+    return result;
 }
 ```
 
-### hybrid-pi.cpp
+### task-32.cpp
 
 ```cpp
 #include <algorithm>
@@ -69,82 +81,88 @@ int main(int argc, char **argv) {
 #include <omp.h>
 #include <string>
 
+int run(long long n, const std::string &mode, int k, int rank, int size) {
+    omp_set_dynamic(0);
+    omp_set_num_threads(k);
+    MPI_Bcast(&n, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
+    // Смежные блоки покрывают все N итераций без пересечений; первые ранги получают остаток.
+    const long long base = n / size, remainder = n % size;
+    const long long begin = rank * base + std::min<long long>(rank, remainder);
+    const long long end = begin + base + (rank < remainder);
+    const double h = 1.0 / n;
+    double local = 0, total = 0;
+    // Перед началом измерения все MPI-процессы достигают общей точки синхронизации.
+    MPI_Barrier(MPI_COMM_WORLD);
+    const double start = MPI_Wtime();
+    // Последовательный режим вычисляет тот же интеграл без команды OpenMP.
+    if (mode == "serial") {
+        for (long long i = begin; i < end; ++i) {
+            const double x = (i + 0.5) * h;
+            local += 4.0 / (1.0 + x * x);
+        }
+    } else {
+        // Одинаковая стоимость итераций позволяет использовать static и локальную редукцию суммы.
+        #pragma omp parallel for reduction(+ : local) schedule(static)
+        for (long long i = begin; i < end; ++i) {
+            const double x = (i + 0.5) * h;
+            local += 4.0 / (1.0 + x * x);
+        }
+    }
+    // MPI объединяет частичные результаты процессов после завершения локальных потоков.
+    MPI_Reduce(&local, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
+    const double elapsed = MPI_Wtime() - start;
+    double maximum;
+    // В таблицу попадает максимум локальных времён; эта редукция находится за границей замера.
+    MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+    // Корень выводит приближение pi, время и параметры конфигурации.
+    if (rank == 0) {
+        std::printf("pi = %.8f\nTime = %.12f\n", total * h, maximum);
+        std::printf("MPI processes = %d, OpenMP threads per process = %d\n", size, mode == "serial" ? 1 : omp_get_max_threads());
+    }
+    return 0;
+}
+
 int main(int argc, char **argv) {
-  int provided;
-  // Все MPI-вызовы выполняет главный поток; OpenMP используется только для локального расчёта.
-  MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
-  if (provided < MPI_THREAD_FUNNELED) {
-    std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
-    MPI_Abort(MPI_COMM_WORLD, 2);
-  }
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-  omp_set_dynamic(0);
-
-  // Режимы serial и openmp образуют базовые сравнения и допускают только один MPI-процесс.
-  std::string mode = "hybrid";
-  if (argc == 3 && std::string(argv[1]) == "--mode")
-    mode = argv[2];
-  if ((argc != 1 && argc != 3) ||
-      (argc == 3 && std::string(argv[1]) != "--mode") ||
-      (mode != "hybrid" && mode != "serial" && mode != "openmp") ||
-      (mode != "hybrid" && size != 1)) {
-    if (rank == 0)
-      std::cerr << "--mode serial|openmp|hybrid; serial/openmp требуют один "
-                   "процесс.\n";
-    MPI_Finalize();
-    return 2;
-  }
-  // Корень проверяет N и сообщает его всем участникам перед вычислением.
-  long long n = 0;
-  if (rank == 0 && (!(std::cin >> n) || n <= 0)) {
-    n = 0;
-    std::cerr << "Нужно N > 0.\n";
-  }
-  MPI_Bcast(&n, 1, MPI_LONG_LONG_INT, 0, MPI_COMM_WORLD);
-  if (!n) {
-    MPI_Finalize();
-    return 2;
-  }
-  // Смежные блоки покрывают все N итераций без пересечений; первые ранги получают остаток.
-  const long long base = n / size, remainder = n % size;
-  const long long begin = rank * base + std::min<long long>(rank, remainder);
-  const long long end = begin + base + (rank < remainder);
-  const double h = 1.0 / n;
-  double local = 0, total = 0;
-  // Перед началом измерения все MPI-процессы достигают общей точки синхронизации.
-  MPI_Barrier(MPI_COMM_WORLD);
-  const double start = MPI_Wtime();
-  // Последовательный режим вычисляет тот же интеграл без команды OpenMP.
-  if (mode == "serial") {
-    for (long long i = begin; i < end; ++i) {
-      const double x = (i + 0.5) * h;
-      local += 4.0 / (1.0 + x * x);
+    int provided;
+    // Все MPI-вызовы выполняет главный поток; OpenMP используется только для локального расчёта.
+    MPI_Init_thread(&argc, &argv, MPI_THREAD_FUNNELED, &provided);
+    if (provided < MPI_THREAD_FUNNELED) {
+        std::cerr << "MPI не поддерживает MPI_THREAD_FUNNELED.\n";
+        MPI_Abort(MPI_COMM_WORLD, 2);
     }
-  } else {
-// Одинаковая стоимость итераций позволяет использовать static и локальную редукцию суммы.
-#pragma omp parallel for reduction(+ : local) schedule(static)
-    for (long long i = begin; i < end; ++i) {
-      const double x = (i + 0.5) * h;
-      local += 4.0 / (1.0 + x * x);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    if (argc != 1 && argc != 4) {
+        if (rank == 0)
+            std::cerr << "Нужен полный набор параметров task-32.\n";
+        MPI_Finalize();
+        return 2;
     }
-  }
-  // MPI объединяет частичные результаты процессов после завершения локальных потоков.
-  MPI_Reduce(&local, &total, 1, MPI_DOUBLE, MPI_SUM, 0, MPI_COMM_WORLD);
-  const double elapsed = MPI_Wtime() - start;
-  double maximum;
-  // В таблицу попадает максимум локальных времён; эта редукция находится за границей замера.
-  MPI_Reduce(&elapsed, &maximum, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
-  // Корень выводит приближение pi, время и параметры конфигурации.
-  if (rank == 0) {
-    std::printf("pi = %.8f\nTime = %.12f\n", total * h, maximum);
-    std::printf("MPI processes = %d, OpenMP threads per process = %d\n", size,
-                mode == "serial" ? 1 : omp_get_max_threads());
-  }
-
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
+    // Корень получает N, затем run сообщает его всем участникам.
+    long long n = 0;
+    // Режимы serial и openmp образуют базовые сравнения и допускают только один MPI-процесс.
+    std::string mode;
+    int k = 0;
+    if (rank == 0) {
+        if (argc == 4) {
+            n = std::stoll(argv[1]);
+            mode = argv[2];
+            k = std::stoi(argv[3]);
+        } else {
+            std::cout << "Введите N, режим (serial, openmp, hybrid) и количество потоков: ";
+            std::cin >> n >> mode >> k;
+        }
+    }
+    int mode_length = static_cast<int>(mode.size());
+    MPI_Bcast(&mode_length, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    mode.resize(mode_length);
+    MPI_Bcast(mode.data(), mode_length, MPI_CHAR, 0, MPI_COMM_WORLD);
+    MPI_Bcast(&k, 1, MPI_INT, 0, MPI_COMM_WORLD);
+    const int result = run(n, mode, k, rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+    MPI_Finalize();
+    return result;
 }
 ```
 
@@ -171,24 +189,19 @@ cmake -S . -B .cache/build -DCMAKE_BUILD_TYPE=Release \
   -DOpenMP_CXX_INCLUDE_DIR="$(brew --prefix libomp)/include" \
   -DOpenMP_omp_LIBRARY="$(brew --prefix libomp)/lib/libomp.dylib"
 cmake --build .cache/build -j 4
-ctest --test-dir .cache/build --output-on-failure
 ```
 
 Число потоков для программ без собственного параметра задаёт `OMP_NUM_THREADS`; динамическое изменение размера команды отключено. MPI-программы запускаются через `mpirun --bind-to none -np P`. Порядок строк от разных исполнителей не фиксируется.
 
 ## Проверка
 
-```text
-OK: практика 7, 25 запусков
-```
-
-Проверки используют реальные исполняемые файлы и ограничение времени 30 с. Проверяется состав сообщений, численные результаты и ошибки входа, а не случайный порядок вывода. В демонстрации гонки №2 проверяется только исправленная private-часть; конкретный ошибочный shared-вывод не является критерием теста.
+Практика проверяется компиляцией и прямыми запусками бинарей без тестовых файлов и фреймворка. Проверяются результаты вычислений и состав сообщений; порядок строк между потоками и процессами не фиксируется. Проверяются все варианты запуска через CLI и stdin, нечётное распределение работы и пустые диапазоны. MPI-программы запускаются с 1, 2 и 4 процессами. Проверяются пары идентификаторов MPI/OpenMP, π и режимы serial, openmp, hybrid. Полные замеры производительности при изменении структуры не повторяются.
 
 ## Эксперименты
 
 
 ```bash
-printf '3\n' | OMP_NUM_THREADS=4 mpirun --bind-to none -np 2 .cache/build/task-31
+mpirun --bind-to none -np 2 .cache/build/task-31 3
 ```
 
 ```text
@@ -201,7 +214,7 @@ I am 1 thread from 0 process. Number of hybrid threads = 6.
 ```
 
 ```bash
-printf '1000000\n' | OMP_NUM_THREADS=4 mpirun --bind-to none -np 2 .cache/build/task-32
+mpirun --bind-to none -np 2 .cache/build/task-32 1000000 hybrid 4
 ```
 
 ```text
@@ -214,7 +227,7 @@ MPI processes = 2, OpenMP threads per process = 4
 
 Один прогрев отдельным запуском и пять измерений каждого режима; показаны медиана и диапазон пяти значений. Начало — после MPI_Barrier, конец — после суммирования частичных результатов. Берётся максимум времени процессов. MPI_Init_thread, создание процессов, ввод, вывод и служебная редукция времени исключены. Создание первой команды OpenMP внутри вычисления входит во время: отдельный прогрев не сохраняет её между процессами.
 
-Все варианты собраны Clang в Release и используют одинаковую формулу средней точки. Чистый MPI — task-18 из практики 6. Для воспроизведения сначала собрать обе практики, затем выполнить `python3 benchmark.py` из практики 7. Привязка процессов отключена (`--bind-to none`), чтобы OpenMP-команды могли использовать все ядра. Максимальное P×K равно 14.
+Все варианты собраны Clang в Release и используют одинаковую формулу средней точки. Чистый MPI — локальный task-18, собранный из неизменённой копии task-18.cpp практики 6. Для воспроизведения собрать эту практику, затем выполнить `python3 benchmark.py` из её каталога. Привязка процессов отключена (`--bind-to none`), чтобы OpenMP-команды могли использовать все ядра. Максимальное P×K равно 14.
 
 | N | Режим | P | K | Медиана, с | Минимум–максимум, с | Ускорение |
 |---:|---|---:|---:|---:|---|---:|
@@ -317,6 +330,6 @@ MPI оперирует процессами ОС с отдельными адр�
 
 ## Источники
 
-- [Методические указания: задания 30–32](<../../lecture/lecture-14-laboratory-work/Лабораторные работы.pdf>).
+- [Методические указания: задания 30–32](<Лабораторные работы.pdf>).
 - [Типовые контрольные вопросы №7.docx](<Типовые контрольные вопросы №7.docx>): исходные контрольные вопросы.
 - [Спецификации OpenMP](https://www.openmp.org/specifications/) и [документация Open MPI](https://docs.open-mpi.org/en/v5.0.x/). Ответы учитывают используемую среду macOS.
