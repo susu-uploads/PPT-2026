@@ -4,133 +4,150 @@
 
 ## Реализация
 
-Созданы независимые task-13..task-16. По тексту условий используются только блокирующие обмены: Send/Recv для эстафеты и мастера, Sendrecv для кольца и полного обмена. В подробных указаниях описаны неблокирующие функции; реализация следует требованию блокирующих обменов из условия. Полный обмен выполнен циклическими шагами, поэтому не опирается на буферизацию MPI_Send. При одном процессе эстафета возвращает 0 без посылки самому себе; полный обмен не передаёт сообщений.
+Программы реализуют схемы «эстафетная палочка», «мастер-рабочие», «сдвиг по кольцу» и «каждый каждому». main инициализирует MPI, получает ранг и размер группы, вызывает run и завершает MPI. Учебные обмены сообщениями находятся внутри run. Случай одного процесса сохраняет корректное поведение без блокирующей отправки самому себе.
 
-Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake. Зависимые варианты выбираются флагами.
+У task-13–task-16 нет пользовательских параметров; число процессов задаёт mpirun.
+
+Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake.
 
 ## ИСХОДНЫЙ КОД
 
-### mpi-relay.cpp
+### task-13.cpp
 
 ```cpp
 #include <cstdio>
 #include <mpi.h>
 
-int main(int argc, char **argv) {
-  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
-  MPI_Init(&argc, &argv);
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+int run(int rank, int size) {
 
-  int value = 0;
-  // Отдельный случай исключает блокирующую отправку самому себе.
-  if (size == 1) {
-    std::printf("[0]: receive message '0'\n");
-  // Процесс 0 первым отправляет 0, затем ждёт возврата эстафеты от последнего процесса.
-  } else if (rank == 0) {
-    MPI_Send(&value, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-    MPI_Recv(&value, 1, MPI_INT, size - 1, 0, MPI_COMM_WORLD,
-             MPI_STATUS_IGNORE);
-    std::printf("[0]: receive message '%d'\n", value);
-  } else {
-    // Рабочий процесс сначала получает значение от предыдущего соседа.
-    MPI_Recv(&value, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD,
-             MPI_STATUS_IGNORE);
-    std::printf("[%d]: receive message '%d'\n", rank, value);
-    // Перед пересылкой полученное значение увеличивается на единицу.
-    ++value;
-    MPI_Send(&value, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD);
-  }
-
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
-}
-```
-
-### mpi-master.cpp
-
-```cpp
-#include <cstdio>
-#include <mpi.h>
-
-int main(int argc, char **argv) {
-  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
-  MPI_Init(&argc, &argv);
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  // Мастер принимает отдельное сообщение от каждого рабочего в порядке рангов.
-  if (rank == 0) {
-    for (int source = 1; source < size; ++source) {
-      int value;
-      MPI_Recv(&value, 1, MPI_INT, source, 0, MPI_COMM_WORLD,
-               MPI_STATUS_IGNORE);
-      std::printf("receive message '%d' from %d\n", value, source);
+    int value = 0;
+    // Отдельный случай исключает блокирующую отправку самому себе.
+    if (size == 1) {
+        std::printf("[0]: receive message '0'\n");
+    // Процесс 0 первым отправляет 0, затем ждёт возврата эстафеты от последнего процесса.
+    } else if (rank == 0) {
+        MPI_Send(&value, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
+        MPI_Recv(&value, 1, MPI_INT, size - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        std::printf("[0]: receive message '%d'\n", value);
+    } else {
+        // Рабочий процесс сначала получает значение от предыдущего соседа.
+        MPI_Recv(&value, 1, MPI_INT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        std::printf("[%d]: receive message '%d'\n", rank, value);
+        // Перед пересылкой полученное значение увеличивается на единицу.
+        ++value;
+        MPI_Send(&value, 1, MPI_INT, (rank + 1) % size, 0, MPI_COMM_WORLD);
     }
-  } else
-    // Каждый рабочий отправляет мастеру собственный номер.
-    MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    return 0;
+}
 
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
+int main(int argc, char **argv) {
+    // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    const int result = run(rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+    MPI_Finalize();
+    return result;
 }
 ```
 
-### mpi-ring.cpp
+### task-14.cpp
 
 ```cpp
 #include <cstdio>
 #include <mpi.h>
 
+int run(int rank, int size) {
+
+    // Мастер принимает отдельное сообщение от каждого рабочего в порядке рангов.
+    if (rank == 0) {
+        for (int source = 1; source < size; ++source) {
+            int value;
+            MPI_Recv(&value, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            std::printf("receive message '%d' from %d\n", value, source);
+        }
+    } else
+        // Каждый рабочий отправляет мастеру собственный номер.
+        MPI_Send(&rank, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+    return 0;
+}
+
 int main(int argc, char **argv) {
-  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
-  MPI_Init(&argc, &argv);
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
-
-  int value = -1;
-  // Операция по модулю замыкает последний и первый процессы в кольцо.
-  const int next = (rank + 1) % size, previous = (rank - 1 + size) % size;
-  // Блокирующий парный обмен совмещает отправку и приём без зависимости от буферизации Send.
-  MPI_Sendrecv(&rank, 1, MPI_INT, next, 0, &value, 1, MPI_INT, previous, 0,
-               MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-  std::printf("[%d]: receive message '%d'\n", rank, value);
-
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
+    // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    const int result = run(rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+    MPI_Finalize();
+    return result;
 }
 ```
 
-### mpi-all-to-all.cpp
+### task-15.cpp
 
 ```cpp
 #include <cstdio>
 #include <mpi.h>
 
-int main(int argc, char **argv) {
-  // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
-  MPI_Init(&argc, &argv);
-  int rank, size;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &size);
+int run(int rank, int size) {
 
-  // За P−1 шагов каждый процесс обменивается сообщениями со всеми остальными.
-  for (int offset = 1; offset < size; ++offset) {
-    // На одном шаге все отправляют по одинаковому циклическому сдвигу.
-    const int destination = (rank + offset) % size;
-    const int source = (rank - offset + size) % size;
     int value = -1;
-    // Источник и адресат согласованы между процессами; ожидание всех отправителей не возникает.
-    MPI_Sendrecv(&rank, 1, MPI_INT, destination, 0, &value, 1, MPI_INT, source,
-                 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-    std::printf("[%d]: receive message '%d' from %d\n", rank, value, source);
-  }
+    // Операция по модулю замыкает последний и первый процессы в кольцо.
+    const int next = (rank + 1) % size, previous = (rank - 1 + size) % size;
+    // Блокирующий парный обмен совмещает отправку и приём без зависимости от буферизации Send.
+    MPI_Sendrecv(&rank, 1, MPI_INT, next, 0, &value, 1, MPI_INT, previous, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+    std::printf("[%d]: receive message '%d'\n", rank, value);
+    return 0;
+}
 
-  // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
-  MPI_Finalize();
+int main(int argc, char **argv) {
+    // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    const int result = run(rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+    MPI_Finalize();
+    return result;
+}
+```
+
+### task-16.cpp
+
+```cpp
+#include <cstdio>
+#include <mpi.h>
+
+int run(int rank, int size) {
+
+    // За P−1 шагов каждый процесс обменивается сообщениями со всеми остальными.
+    for (int offset = 1; offset < size; ++offset) {
+        // На одном шаге все отправляют по одинаковому циклическому сдвигу.
+        const int destination = (rank + offset) % size;
+        const int source = (rank - offset + size) % size;
+        int value = -1;
+        // Источник и адресат согласованы между процессами; ожидание всех отправителей не возникает.
+        MPI_Sendrecv(&rank, 1, MPI_INT, destination, 0, &value, 1, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        std::printf("[%d]: receive message '%d' from %d\n", rank, value, source);
+    }
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    // Инициализация выполняется один раз в каждом уже запущенном MPI-процессе.
+    MPI_Init(&argc, &argv);
+    int rank, size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+    const int result = run(rank, size);
+    // Все обмены завершены; процесс освобождает ресурсы MPI перед выходом.
+    MPI_Finalize();
+    return result;
 }
 ```
 
@@ -155,18 +172,13 @@ brew install llvm libomp open-mpi cmake
 cmake -S . -B .cache/build -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER="$(brew --prefix llvm)/bin/clang++"
 cmake --build .cache/build -j 4
-ctest --test-dir .cache/build --output-on-failure
 ```
 
 Число потоков для программ без собственного параметра задаёт `OMP_NUM_THREADS`; динамическое изменение размера команды отключено. MPI-программы запускаются через `mpirun --bind-to none -np P`. Порядок строк от разных исполнителей не фиксируется.
 
 ## Проверка
 
-```text
-OK: практика 5, 12 запусков
-```
-
-Проверки используют реальные исполняемые файлы и ограничение времени 30 с. Проверяется состав сообщений, численные результаты и ошибки входа, а не случайный порядок вывода. В демонстрации гонки №2 проверяется только исправленная private-часть; конкретный ошибочный shared-вывод не является критерием теста.
+Практика проверяется компиляцией и прямыми запусками бинарей без тестовых файлов и фреймворка. Проверяются результаты вычислений и состав сообщений; порядок строк между потоками и процессами не фиксируется. MPI-программы запускаются с 1, 2 и 4 процессами. Проверяются отправители, получатели и значения сообщений во всех четырёх схемах, включая случай одного процесса.
 
 ## Эксперименты
 
