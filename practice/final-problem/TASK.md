@@ -1,7 +1,7 @@
 ---
 ru: "Итоговая задача"
 en: "Final problem"
-code: "practice-1-final-problem"
+code: "final-problem"
 origin: "https://edu.susu.ru/mod/assign/view.php?id=8720519"
 ---
 
