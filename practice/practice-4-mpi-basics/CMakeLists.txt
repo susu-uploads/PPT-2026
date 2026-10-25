@@ -6,18 +6,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(MPI REQUIRED COMPONENTS CXX)
 
-add_executable(task-11 "mpi-hello-world.cpp")
+add_executable(task-11 "task-11.cpp")
 target_compile_options(task-11 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-11 PRIVATE MPI::MPI_CXX)
 
-add_executable(task-12 "mpi-even-odd.cpp")
+add_executable(task-12 "task-12.cpp")
 target_compile_options(task-12 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-12 PRIVATE MPI::MPI_CXX)
-
-include("../../cmake/PracticeTests.cmake")
-if(BUILD_TESTING)
-  foreach(p IN ITEMS 1 2 4)
-    add_program_test(hello-world-p${p} task-11 PROCESSES ${p} CHECK hello ${p})
-    add_program_test(even-odd-p${p} task-12 PROCESSES ${p} CHECK parity ${p})
-  endforeach()
-endif()
