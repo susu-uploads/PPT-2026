@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
         if (argc == 2) {
             k = std::stoi(argv[1]);
         } else {
-            std::cout << "Введите количество потоков в каждом процессе: ";
+            std::cout << "Введите количество потоков в каждом процессе:\n";
             std::cin >> k;
         }
     }

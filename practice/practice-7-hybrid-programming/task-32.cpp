@@ -64,8 +64,12 @@ int main(int argc, char **argv) {
             mode = argv[2];
             k = std::stoi(argv[3]);
         } else {
-            std::cout << "Введите N, режим (serial, openmp, hybrid) и количество потоков: ";
-            std::cin >> n >> mode >> k;
+            std::cout << "Введите N:\n";
+            std::cin >> n;
+            std::cout << "Введите режим (serial, openmp, hybrid):\n";
+            std::cin >> mode;
+            std::cout << "Введите количество потоков:\n";
+            std::cin >> k;
         }
     }
     int mode_length = static_cast<int>(mode.size());
