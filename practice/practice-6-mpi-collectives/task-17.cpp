@@ -72,8 +72,14 @@ int main(int argc, char **argv) {
             point = std::stoi(argv[3]);
             benchmark = std::stoi(argv[4]);
         } else {
-            std::cout << "Введите длину, строку, точечные обмены (0/1) и измерение времени (0/1): ";
-            std::cin >> n >> text >> point >> benchmark;
+            std::cout << "Введите длину строки:\n";
+            std::cin >> n;
+            std::cout << "Введите строку:\n";
+            std::cin >> text;
+            std::cout << "Использовать точечные обмены (0/1):\n";
+            std::cin >> point;
+            std::cout << "Измерять время (0/1):\n";
+            std::cin >> benchmark;
         }
     }
     MPI_Bcast(&point, 1, MPI_INT, 0, MPI_COMM_WORLD);

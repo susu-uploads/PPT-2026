@@ -89,8 +89,12 @@ int main(int argc, char **argv) {
                 benchmark = std::stoi(argv[3]);
             }
         } else {
-            std::cout << "Введите размер n, точечные обмены (0/1), измерение времени (0/1) и матрицы A и B построчно: ";
-            std::cin >> n >> point >> benchmark;
+            std::cout << "Введите размер n:\n";
+            std::cin >> n;
+            std::cout << "Использовать точечные обмены (0/1):\n";
+            std::cin >> point;
+            std::cout << "Измерять время (0/1):\n";
+            std::cin >> benchmark;
         }
         if (status == 0) {
             a.resize(n * n);
@@ -101,8 +105,10 @@ int main(int argc, char **argv) {
                 for (int i = 0; i < n * n; ++i)
                     b[i] = std::stod(argv[4 + n * n + i]);
             } else {
+                std::cout << "Введите элементы матрицы A построчно:\n";
                 for (double &value : a)
                     std::cin >> value;
+                std::cout << "Введите элементы матрицы B построчно:\n";
                 for (double &value : b)
                     std::cin >> value;
             }
