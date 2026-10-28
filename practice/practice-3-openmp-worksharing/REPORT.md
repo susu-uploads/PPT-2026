@@ -8,7 +8,7 @@ task-6 реализует суммирование и зависимое зад�
 
 `task-6 k N schedule trace` (static, static,1, static,2, dynamic, dynamic,2, guided, guided,2; trace=0/1); `task-8 n A... B...`; `task-9 k`.
 
-Полный набор параметров передаётся позиционными аргументами. Без аргументов main выводит одно приглашение и читает те же значения через stdin; в MPI-программах ввод читает только ранг 0. Числа преобразуются стандартными функциями, дополнительная валидация содержимого ввода не выполняется.
+Полный набор параметров передаётся позиционными аргументами. Без аргументов main запрашивает каждый независимый параметр отдельным приглашением и читает его через stdin; в MPI-программах ввод читает только ранг 0. Числа преобразуются стандартными функциями, дополнительная валидация содержимого ввода не выполняется. Размер матриц n вводится отдельно; затем элементы каждой матрицы вводятся одним блоком построчно после своего приглашения.
 
 Исходники находятся непосредственно в каталоге практики. Каждый независимый `.cpp` имеет собственную точку входа; вся практика собирается одной командой CMake.
 
@@ -81,8 +81,14 @@ int main(int argc, char **argv) {
         schedule = argv[3];
         trace = std::stoi(argv[4]);
     } else if (argc == 1) {
-        std::cout << "Введите k, N, расписание (static, static,1, static,2, dynamic, dynamic,2, guided, guided,2) и вывод итераций (0/1): ";
-        std::cin >> k >> n >> schedule >> trace;
+        std::cout << "Введите количество потоков: ";
+        std::cin >> k;
+        std::cout << "Введите N: ";
+        std::cin >> n;
+        std::cout << "Введите расписание (static, static,1, static,2, dynamic, dynamic,2, guided, guided,2): ";
+        std::cin >> schedule;
+        std::cout << "Выводить итерации (0/1): ";
+        std::cin >> trace;
     } else {
         std::cerr << "Использование: task-6 [k N schedule trace]\n";
         return 2;
@@ -132,7 +138,7 @@ int main(int argc, char **argv) {
             return 2;
         }
     } else {
-        std::cout << "Введите размер n и элементы матриц A и B построчно: ";
+        std::cout << "Введите размер n: ";
         std::cin >> n;
     }
     std::vector<double> a(n * n), b(n * n);
@@ -142,8 +148,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n * n; ++i)
             b[i] = std::stod(argv[2 + n * n + i]);
     } else {
+        std::cout << "Введите элементы матрицы A построчно: ";
         for (double &value : a)
             std::cin >> value;
+        std::cout << "Введите элементы матрицы B построчно: ";
         for (double &value : b)
             std::cin >> value;
     }

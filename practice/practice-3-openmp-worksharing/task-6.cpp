@@ -56,8 +56,14 @@ int main(int argc, char **argv) {
         schedule = argv[3];
         trace = std::stoi(argv[4]);
     } else if (argc == 1) {
-        std::cout << "Введите k, N, расписание (static, static,1, static,2, dynamic, dynamic,2, guided, guided,2) и вывод итераций (0/1): ";
-        std::cin >> k >> n >> schedule >> trace;
+        std::cout << "Введите количество потоков: ";
+        std::cin >> k;
+        std::cout << "Введите N: ";
+        std::cin >> n;
+        std::cout << "Введите расписание (static, static,1, static,2, dynamic, dynamic,2, guided, guided,2): ";
+        std::cin >> schedule;
+        std::cout << "Выводить итерации (0/1): ";
+        std::cin >> trace;
     } else {
         std::cerr << "Использование: task-6 [k N schedule trace]\n";
         return 2;

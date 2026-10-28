@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
             return 2;
         }
     } else {
-        std::cout << "Введите размер n и элементы матриц A и B построчно: ";
+        std::cout << "Введите размер n: ";
         std::cin >> n;
     }
     std::vector<double> a(n * n), b(n * n);
@@ -41,8 +41,10 @@ int main(int argc, char **argv) {
         for (int i = 0; i < n * n; ++i)
             b[i] = std::stod(argv[2 + n * n + i]);
     } else {
+        std::cout << "Введите элементы матрицы A построчно: ";
         for (double &value : a)
             std::cin >> value;
+        std::cout << "Введите элементы матрицы B построчно: ";
         for (double &value : b)
             std::cin >> value;
     }
