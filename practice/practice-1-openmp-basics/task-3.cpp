@@ -23,8 +23,10 @@ int main(int argc, char **argv) {
         k = std::stoi(argv[1]);
         even = std::stoi(argv[2]);
     } else if (argc == 1) {
-        std::cout << "Введите количество потоков и режим (0 — все, 1 — только чётные): ";
-        std::cin >> k >> even;
+        std::cout << "Введите количество потоков: ";
+        std::cin >> k;
+        std::cout << "Введите режим (0 — все, 1 — только чётные): ";
+        std::cin >> even;
     } else {
         std::cerr << "Использование: task-3 [k even]\n";
         return 2;
