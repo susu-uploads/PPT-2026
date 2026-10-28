@@ -44,8 +44,10 @@ int main(int argc, char **argv) {
         k = std::stoi(argv[1]);
         mode = argv[2];
     } else if (argc == 1) {
-        std::cout << "Введите количество потоков и режим (all, shared, shared-sleep, private): ";
-        std::cin >> k >> mode;
+        std::cout << "Введите количество потоков: ";
+        std::cin >> k;
+        std::cout << "Введите режим (all, shared, shared-sleep, private): ";
+        std::cin >> mode;
     } else {
         std::cerr << "Использование: task-4 [k mode]\n";
         return 2;

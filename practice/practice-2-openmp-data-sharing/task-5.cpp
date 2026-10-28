@@ -38,8 +38,12 @@ int main(int argc, char **argv) {
         n = std::stoll(argv[2]);
         extra = std::stoi(argv[3]);
     } else if (argc == 1) {
-        std::cout << "Введите количество потоков, N и вариант (0 — базовый с k=2, 1 — дополнительный): ";
-        std::cin >> k >> n >> extra;
+        std::cout << "Введите количество потоков: ";
+        std::cin >> k;
+        std::cout << "Введите N: ";
+        std::cin >> n;
+        std::cout << "Введите вариант (0 — базовый с k=2, 1 — дополнительный): ";
+        std::cin >> extra;
     } else {
         std::cerr << "Использование: task-5 [k N extra]\n";
         return 2;
