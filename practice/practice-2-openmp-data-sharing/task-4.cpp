@@ -8,7 +8,7 @@
 int run(int k, const std::string &mode) {
     omp_set_dynamic(0);
     int rank = 0;
-    if (mode == "all" || mode == "shared") {
+    if (mode == "shared") {
         std::puts("Shared:");
         #pragma omp parallel num_threads(k) shared(rank)
         {
@@ -16,7 +16,7 @@ int run(int k, const std::string &mode) {
             std::printf("I am %d thread.\n", rank);
         }
     }
-    if (mode == "all" || mode == "shared-sleep") {
+    if (mode == "shared-sleep") {
         std::puts("Shared with sleep:");
         #pragma omp parallel num_threads(k) shared(rank)
         {
@@ -25,7 +25,7 @@ int run(int k, const std::string &mode) {
             std::printf("I am %d thread.\n", rank);
         }
     }
-    if (mode == "all" || mode == "private") {
+    if (mode == "private") {
         std::puts("Private:");
         #pragma omp parallel num_threads(k) private(rank)
         {
@@ -46,7 +46,7 @@ int main(int argc, char **argv) {
     } else if (argc == 1) {
         std::cout << "Введите количество потоков: ";
         std::cin >> k;
-        std::cout << "Введите режим (all, shared, shared-sleep, private): ";
+        std::cout << "Введите режим (shared, shared-sleep, private): ";
         std::cin >> mode;
     } else {
         std::cerr << "Использование: task-4 [k mode]\n";

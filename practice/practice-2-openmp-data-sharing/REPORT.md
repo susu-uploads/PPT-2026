@@ -4,9 +4,9 @@
 
 ## Реализация
 
-task-4 показывает общую переменную shared, shared с задержкой 100 мс и private; режим выбирается параметром mode. Намеренная гонка сохранена как учебная демонстрация, а private использует отдельную переменную каждого потока. task-5 делит диапазон между двумя потоками в базовом варианте и распределяет остаток между первыми потоками в дополнительном. Для extra=0 задаётся k=2. Сумма хранится в long long; корректные данные задачи предполагают N от 0 до 4294967295.
+task-4 показывает общую переменную shared, shared с задержкой 100 мс и private; режим выбирается параметром mode. Намеренная гонка сохранена как учебная демонстрация, а private использует отдельную переменную каждого потока. task-5-1 делит диапазон между двумя потоками с помощью if. task-5-2 работает с произвольным количеством потоков k и распределяет остаток между первыми потоками. Числа хранятся в int; сумма помещается в 32-битный int при N от 0 до 65535.
 
-`task-4 k mode` (all, shared, shared-sleep, private); `task-5 k N extra` (0/1).
+`task-4 k mode` (shared, shared-sleep, private); `task-5-1 N`; `task-5-2 k N`.
 
 Полный набор параметров передаётся позиционными аргументами. Без аргументов main запрашивает каждый независимый параметр отдельным приглашением и читает его через stdin; в MPI-программах ввод читает только ранг 0. Числа преобразуются стандартными функциями, дополнительная валидация содержимого ввода не выполняется.
 
@@ -24,12 +24,12 @@ task-4 показывает общую переменную shared, shared с з
 #include <string>
 #include <thread>
 
-// Режим all запускает все демонстрации; private позволяет проверить исправление отдельно.
+// Режим private позволяет проверить исправление отдельно.
 int run(int k, const std::string &mode) {
     omp_set_dynamic(0);
     int rank = 0;
     // Общая rank намеренно содержит гонку данных: результат не гарантируется стандартом C++.
-    if (mode == "all" || mode == "shared") {
+    if (mode == "shared") {
         std::puts("Shared:");
         #pragma omp parallel num_threads(k) shared(rank)
         {
@@ -38,7 +38,7 @@ int run(int k, const std::string &mode) {
         }
     }
     // Задержка увеличивает окно конфликта, но не делает ошибочный результат детерминированным.
-    if (mode == "all" || mode == "shared-sleep") {
+    if (mode == "shared-sleep") {
         std::puts("Shared with sleep:");
         #pragma omp parallel num_threads(k) shared(rank)
         {
@@ -48,7 +48,7 @@ int run(int k, const std::string &mode) {
         }
     }
     // Каждый поток получает свою rank и присваивает ей значение до первого чтения.
-    if (mode == "all" || mode == "private") {
+    if (mode == "private") {
         std::puts("Private:");
         #pragma omp parallel num_threads(k) private(rank)
         {
@@ -70,7 +70,7 @@ int main(int argc, char **argv) {
     } else if (argc == 1) {
         std::cout << "Введите количество потоков: ";
         std::cin >> k;
-        std::cout << "Введите режим (all, shared, shared-sleep, private): ";
+        std::cout << "Введите режим (shared, shared-sleep, private): ";
         std::cin >> mode;
     } else {
         std::cerr << "Использование: task-4 [k mode]\n";
@@ -80,7 +80,7 @@ int main(int argc, char **argv) {
 }
 ```
 
-### task-5.cpp
+### task-5-1.cpp
 
 ```cpp
 #include <cstdio>
@@ -89,58 +89,94 @@ int main(int argc, char **argv) {
 #include <string>
 
 // По условию основной вариант использует два потока.
-int run(int k, long long n, bool extra) {
+int run(int n) {
     omp_set_dynamic(0);
-    long long sum = 0;
+    int sum = 0;
+    // reduction создаёт частные суммы и объединяет их при завершении области.
+    #pragma omp parallel num_threads(2) reduction(+ : sum)
+    {
+        const int rank = omp_get_thread_num();
+        int start, end;
+        // Оператор if делит основной диапазон между двумя потоками без пересечения.
+        if (rank == 0) {
+            start = 1;
+            end = n / 2;
+        } else {
+            start = n / 2 + 1;
+            end = n;
+        }
+        // Поток суммирует только принадлежащие ему числа; пустой диапазон даёт ноль.
+        for (int i = start; i <= end; ++i)
+            sum += i;
+        std::printf("[%d]: Sum = %d\n", rank, sum);
+    }
+    // После окончания области sum уже содержит объединённый результат.
+    std::printf("Sum = %d\n", sum);
+    return 0;
+}
+
+// В main получается N; число потоков фиксировано в run.
+int main(int argc, char **argv) {
+    int n;
+    if (argc == 2) {
+        n = std::stoi(argv[1]);
+    } else if (argc == 1) {
+        std::cout << "Введите N: ";
+        std::cin >> n;
+    } else {
+        std::cerr << "Использование: task-5-1 [N]\n";
+        return 2;
+    }
+    return run(n);
+}
+```
+
+### task-5-2.cpp
+
+```cpp
+#include <cstdio>
+#include <iostream>
+#include <omp.h>
+#include <string>
+
+int run(int k, int n) {
+    omp_set_dynamic(0);
+    int sum = 0;
     // reduction создаёт частные суммы и объединяет их при завершении области.
     #pragma omp parallel num_threads(k) reduction(+ : sum)
     {
         const int rank = omp_get_thread_num(), size = omp_get_num_threads();
-        long long start, end;
-        // Оператор if делит основной диапазон между двумя потоками без пересечения.
-        if (!extra && rank == 0) {
-            start = 1;
-            end = n / 2;
-        } else if (!extra) {
-            start = n / 2 + 1;
-            end = n;
-        } else {
-            // При произвольном k остаток раздаётся первым потокам по одному элементу.
-            const long long base = n / size, remainder = n % size;
-            start = rank * base + (rank < remainder ? rank : remainder) + 1;
-            end = start + base + (rank < remainder) - 1;
-        }
+        // При произвольном k остаток раздаётся первым потокам по одному элементу.
+        const int base = n / size, remainder = n % size;
+        const int start = rank * base + (rank < remainder ? rank : remainder) + 1;
+        const int end = start + base + (rank < remainder) - 1;
         // Поток суммирует только принадлежащие ему числа; пустой диапазон даёт ноль.
-        for (long long i = start; i <= end; ++i)
+        for (int i = start; i <= end; ++i)
             sum += i;
-        std::printf("[%d]: Sum = %lld\n", rank, sum);
+        std::printf("[%d]: Sum = %d\n", rank, sum);
     }
     // После окончания области sum уже содержит объединённый результат.
-    std::printf("Sum = %lld\n", sum);
+    std::printf("Sum = %d\n", sum);
     return 0;
 }
 
-// В main получаются k, N и признак дополнительного варианта extra.
+// В main получаются k и N.
 int main(int argc, char **argv) {
     int k;
-    long long n;
-    bool extra;
-    if (argc == 4) {
+    int n;
+    if (argc == 3) {
         k = std::stoi(argv[1]);
-        n = std::stoll(argv[2]);
-        extra = std::stoi(argv[3]);
+        n = std::stoi(argv[2]);
     } else if (argc == 1) {
         std::cout << "Введите количество потоков: ";
         std::cin >> k;
         std::cout << "Введите N: ";
         std::cin >> n;
-        std::cout << "Введите вариант (0 — базовый с k=2, 1 — дополнительный): ";
-        std::cin >> extra;
     } else {
-        std::cerr << "Использование: task-5 [k N extra]\n";
+        std::cerr << "Использование: task-5-2 [k N]\n";
         return 2;
     }
-    return run(k, n, extra);
+    return run(k, n);
 }
 ```
 
@@ -179,7 +215,9 @@ cmake --build .cache/build -j 4
 
 
 ```bash
-OMP_NUM_THREADS=4 .cache/build/task-4 4 all
+OMP_NUM_THREADS=4 .cache/build/task-4 4 shared
+OMP_NUM_THREADS=4 .cache/build/task-4 4 shared-sleep
+OMP_NUM_THREADS=4 .cache/build/task-4 4 private
 ```
 
 ```text
@@ -201,7 +239,7 @@ I am 1 thread.
 ```
 
 ```bash
-OMP_NUM_THREADS=4 .cache/build/task-5 2 5 0
+OMP_NUM_THREADS=4 .cache/build/task-5-1 5
 ```
 
 ```text
@@ -211,7 +249,7 @@ Sum = 15
 ```
 
 ```bash
-OMP_NUM_THREADS=4 .cache/build/task-5 4 2 1
+OMP_NUM_THREADS=4 .cache/build/task-5-2 4 2
 ```
 
 ```text
@@ -246,7 +284,7 @@ reduction создаёт для каждого участника частный
 
 ## Вывод
 
-В исправленной private-версии каждому потоку соответствует свой номер. Общая rank допускает конфликт, а задержка делает его заметнее, не создавая гарантии конкретного ошибочного вывода. Оба варианта суммирования дают N(N+1)/2, включая нулевой диапазон и k>N.
+В исправленной private-версии каждому потоку соответствует свой номер. Общая rank допускает конфликт, а задержка делает его заметнее, не создавая гарантии конкретного ошибочного вывода. Обе программы суммирования дают N(N+1)/2, включая нулевой диапазон; task-5-2 также обрабатывает k>N.
 
 ## Источники
 

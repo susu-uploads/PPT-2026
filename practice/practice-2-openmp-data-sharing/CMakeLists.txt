@@ -10,6 +10,10 @@ add_executable(task-4 "task-4.cpp")
 target_compile_options(task-4 PRIVATE -Wall -Wextra -Wpedantic)
 target_link_libraries(task-4 PRIVATE OpenMP::OpenMP_CXX)
 
-add_executable(task-5 "task-5.cpp")
-target_compile_options(task-5 PRIVATE -Wall -Wextra -Wpedantic)
-target_link_libraries(task-5 PRIVATE OpenMP::OpenMP_CXX)
+add_executable(task-5-1 "task-5-1.cpp")
+target_compile_options(task-5-1 PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(task-5-1 PRIVATE OpenMP::OpenMP_CXX)
+
+add_executable(task-5-2 "task-5-2.cpp")
+target_compile_options(task-5-2 PRIVATE -Wall -Wextra -Wpedantic)
+target_link_libraries(task-5-2 PRIVATE OpenMP::OpenMP_CXX)
